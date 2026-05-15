@@ -6,11 +6,16 @@ class UserCreate(BaseModel):
     senha: str
     role: str = "Suporte"
 
+class UserUpdate(BaseModel):
+    role: str
+    ativo: bool
+
 class UserResponse(BaseModel):
     id: int
     email: str
     role: str
     exige_troca_senha: bool
+    ativo: bool
 
     class Config:
         from_attributes = True

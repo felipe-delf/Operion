@@ -63,7 +63,7 @@ class OdbcWorker:
         
         # Busca os PDVs atrelados à Loja
         cursor.execute(f"SELECT B.CAIXA, B.IP FROM LOJAS A INNER JOIN LOJAS_PDV B ON B.REGISTRO = A.REGISTRO WHERE A.LOJA = {loja_id}")
-        pdvs = [{"caixa": r[0], "ip": r[1]} for r in cursor.fetchall()]
+        pdvs = [{"caixa": int(r[0]), "ip": r[1]} for r in cursor.fetchall()]
         
         conn.close()
         print(f"✅ [WORKER] Dados da loja {loja_id} encontrados. Servidor: {ip_servidor}, PDVs: {len(pdvs)}")
@@ -133,6 +133,10 @@ def run_script_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv: s
                 return
         ACTIVE_JOBS[job_id]["etapas"].append({"nome": nome, "status": status})
 
+    parametros = parametros or {}
+    parametros["loja"] = loja_id
+    parametros["loja_id"] = loja_id
+
     worker = OdbcWorker()
     
     try:
@@ -140,8 +144,8 @@ def run_script_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv: s
         store_info = worker.get_store_info(loja_id)
         update_etapa("Conectando na Retaguarda (10.10.0.3)", "sucesso")
         
-        # 1. Se alvo for SERVIDOR, roda apenas o SQL do servidor
-        if alvo == "SERVIDOR" and sql_servidor:
+        # 1. Se alvo envolver SERVIDOR, roda o SQL do servidor
+        if alvo in ["SERVIDOR", "AMBOS"] and sql_servidor:
             etapa_nome = f"Servidor da Loja ({store_info['ip_servidor']})"
             update_etapa(etapa_nome, "rodando")
             
@@ -155,19 +159,23 @@ def run_script_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv: s
             except Exception as e:
                 update_etapa(etapa_nome, "erro")
             
-        # 2. Se alvo for PDV
-        if (alvo == "TODOS_PDVS" or alvo == "PDV_ESPECIFICO") and sql_pdv:
+        # 2. Se alvo envolver PDVs
+        if alvo in ["TODOS_PDVS", "PDV_ESPECIFICO", "AMBOS"] and sql_pdv:
             pdvs_alvo = store_info["pdvs"]
             
             if alvo == "PDV_ESPECIFICO":
-                numero_caixa = int(parametros.get("caixa", 0))
+                try:
+                    c_val = parametros.get("caixa", 0)
+                    numero_caixa = int(c_val) if c_val else 0
+                except (ValueError, TypeError):
+                    numero_caixa = 0
                 pdvs_alvo = [p for p in pdvs_alvo if p["caixa"] == numero_caixa]
             
             for pdv in pdvs_alvo:
                 etapa_nome = f"PDV Caixa {pdv['caixa']} ({pdv['ip']})"
                 update_etapa(etapa_nome, "rodando")
                 
-                sql_final = sql_pdv
+                sql_final = sql_pdv.replace("{caixa}", str(pdv["caixa"]))
                 for key, val in parametros.items():
                     sql_final = sql_final.replace(f"{{{key}}}", str(val))
                     
@@ -194,7 +202,7 @@ def run_store_scan(loja_id: int, regras: list):
     regras_processadas = []
     for regra in regras:
         esperado = regra.valor_esperado.strip()
-        if esperado.upper().startswith("SELECT"):
+        if getattr(regra, "valor_esperado_is_query", False) or esperado.upper().startswith("SELECT"):
             sql_ret = esperado.replace("{loja_id}", str(loja_id)).replace("{loja}", str(loja_id))
             try:
                 conn = worker.connect_retaguarda()
@@ -207,7 +215,9 @@ def run_store_scan(loja_id: int, regras: list):
                 esperado = "ERRO_SQL_RETAGUARDA"
                 
         regras_processadas.append({
-            "nome": regra.nome,
+            "grupo_nome": regra.grupo.nome if regra.grupo else regra.nome,
+            "grupo_descricao": regra.grupo.descricao if regra.grupo and regra.grupo.descricao else "Verificação de parametrização.",
+            "regra_nome": regra.nome,
             "tipo_alvo": regra.tipo_alvo,
             "sql_query": regra.sql_query,
             "valor_esperado": esperado
@@ -245,20 +255,22 @@ def run_store_scan(loja_id: int, regras: list):
         except Exception:
             return {"ip": ip, "caixa": caixa_id, "status": "offline", "parametros": [], "erros": []}
             
-        # Agrupar regras por nome para consolidar em uma unica TAG
+        # Agrupar regras por nome do grupo para consolidar em uma unica TAG
         regras_agrupadas = {}
         for regra in regras_processadas:
             if regra["tipo_alvo"] in [tipo_alvo_req, "AMBOS"]:
-                nome_r = regra["nome"]
-                if nome_r not in regras_agrupadas:
-                    regras_agrupadas[nome_r] = []
-                regras_agrupadas[nome_r].append(regra)
+                nome_g = regra["grupo_nome"]
+                if nome_g not in regras_agrupadas:
+                    regras_agrupadas[nome_g] = {"descricao": regra["grupo_descricao"], "regras": []}
+                regras_agrupadas[nome_g]["regras"].append(regra)
                 
-        for nome_grupo, lista_regras in regras_agrupadas.items():
+        for nome_grupo, data_grupo in regras_agrupadas.items():
             grupo_valido = True
             erros_do_grupo = []
+            tooltip_lines = [f"Objetivo: {data_grupo['descricao']}\n", "Regras analisadas:"]
             
-            for regra in lista_regras:
+            for regra in data_grupo["regras"]:
+                tooltip_lines.append(f"• {regra['regra_nome']} (Esp: {regra['valor_esperado']})")
                 try:
                     res = worker.execute_query(ip, base, regra["sql_query"], timeout=3)
                     if res.strip().upper() != regra["valor_esperado"].upper():
@@ -268,13 +280,15 @@ def run_store_scan(loja_id: int, regras: list):
                     grupo_valido = False
                     erros_do_grupo.append("Erro na Query SQL")
                     
+            tooltip = "\n".join(tooltip_lines)
+                    
             if grupo_valido:
-                parametros_ok.append(nome_grupo)
+                parametros_ok.append({"nome": nome_grupo, "tooltip": f"Validações OK:\n{tooltip}"})
             else:
                 # Remove itens vazios
                 erros_do_grupo = [e for e in set(erros_do_grupo) if e]
                 msg_erro = f"{nome_grupo} ({' | '.join(erros_do_grupo)})"
-                erros.append(msg_erro)
+                erros.append({"nome": msg_erro, "tooltip": f"Falha na validação:\n{tooltip}"})
                     
         return {"ip": ip, "caixa": caixa_id, "status": status, "parametros": parametros_ok, "erros": erros}
         

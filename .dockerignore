@@ -1,0 +1,10 @@
+.git
+.env
+venv/
+env/
+.venv/
+__pycache__/
+node_modules/
+dist/
+*.pyc
+parametrizacao.db

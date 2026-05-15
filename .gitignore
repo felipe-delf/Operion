@@ -1,70 +1,21 @@
-# =========================
-# 🔐 Arquivos sensíveis
-# =========================
-.env
-*.env
-
-# Banco de dados local
-*.db
-*.sqlite3
-
-# =========================
-# 🐍 Python
-# =========================
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Ambiente virtual
+*.so
+.env
+parametrizacao.db
 venv/
-.env/
-.venv/
-ENV/
 env/
+.venv/
 
-# =========================
-# 📦 Dependências / build
-# =========================
-build/
+# Node
+node_modules/
 dist/
-*.egg-info/
-.eggs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# =========================
-# 🧪 Testes / cobertura
-# =========================
-.coverage
-htmlcov/
-.pytest_cache/
-
-# =========================
-# ⚙️ IDEs / editores
-# =========================
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# =========================
-# 🖥️ Sistema operacional
-# =========================
+# OS
 .DS_Store
 Thumbs.db
-
-# =========================
-# 🧾 Logs
-# =========================
-*.log
-
-# =========================
-# 🔧 Uvicorn / runtime
-# =========================
-*.pid
-*.sock
-
-# =========================
-# 📁 Arquivos temporários
-# =========================
-*.tmp
-*.bak
-*.old

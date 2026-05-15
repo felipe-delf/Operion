@@ -17,5 +17,6 @@ class UserModel(Base):
     senha_hash = Column(String(255), nullable=False)
     role = Column(String(50), default="Suporte") # 'Admin' ou 'Suporte'
     exige_troca_senha = Column(Boolean, default=True)
+    ativo = Column(Boolean, default=True)  # False = usuário bloqueado, não consegue logar
 
     scripts_permitidos = relationship("ScriptModel", secondary=user_script_access)

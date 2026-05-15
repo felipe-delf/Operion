@@ -4,7 +4,7 @@ from typing import List
 from app.core.database import get_db
 from app.models.user import UserModel
 from app.models.script import ScriptModel
-from app.schemas.user_schema import UserCreate, UserResponse
+from app.schemas.user_schema import UserCreate, UserResponse, UserUpdate
 from app.core.security import get_password_hash
 from pydantic import BaseModel
 
@@ -44,6 +44,18 @@ def resetar_senha(user_id: int, db: Session = Depends(get_db)):
     user.exige_troca_senha = True
     db.commit()
     return {"message": f"Senha de {user.email} resetada para 'mudar123'."}
+
+@router.put("/{user_id}", response_model=UserResponse, tags=["Admin - Usuários"])
+def editar_usuario(user_id: int, req: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    user.role = req.role
+    user.ativo = req.ativo
+    db.commit()
+    db.refresh(user)
+    return user
 
 @router.get("/{user_id}/permissoes", tags=["Admin - Usuários"])
 def listar_permissoes(user_id: int, db: Session = Depends(get_db)):

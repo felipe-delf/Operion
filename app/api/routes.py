@@ -86,12 +86,18 @@ def listar_lojas(db: Session = Depends(get_db), current_user: dict = Depends(get
         worker = OdbcWorker()
         conn = worker.connect_retaguarda()
         cursor = conn.cursor()
-        # Busca todas as lojas ativas
-        cursor.execute("SELECT LOJA, NOME_RESUMIDO FROM LOJAS WHERE ATIVA = 'S' ORDER BY LOJA")
+        query = """
+        SELECT L.LOJA, L.NOME_RESUMIDO, P.INSCRICAO_FEDERAL
+        FROM LOJAS L WITH(NOLOCK)
+        LEFT JOIN PESSOAS_JURIDICAS P WITH(NOLOCK) ON P.ENTIDADE = L.LOJA
+        WHERE L.ATIVA = 'S'
+        ORDER BY L.LOJA
+        """
+        cursor.execute(query)
         rows = cursor.fetchall()
         conn.close()
         
-        lojas = [{"id": int(r[0]), "nome": r[1], "cnpj": "00.000.000/0000-00"} for r in rows]
+        lojas = [{"id": int(r[0]), "nome": r[1], "cnpj": str(r[2]).strip() if r[2] else "N/D"} for r in rows]
         return lojas
     except Exception as e:
         print(f"Erro ao buscar lojas: {e}")

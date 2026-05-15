@@ -25,18 +25,19 @@ function Navbar() {
           <Shield size={24} color="#818cf8" />
           <h1>PromoSync</h1>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '15px' }}>
           <Link to="/dashboard" style={{ color: 'white', textDecoration: 'none', fontWeight: 500 }}>Dashboard</Link>
+
           {role === 'Admin' && (
             <>
-              <Link to="/scripts" style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', gap: '5px' }}>
+              <Link to="/scripts" style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', gap: '5px', alignItems: 'center' }}>
                 <Code size={18} /> Cofre SQL
               </Link>
-              <Link to="/auditoria" style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', gap: '5px' }}>
+              <Link to="/auditoria" style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', gap: '5px', alignItems: 'center' }}>
                 <ShieldCheck size={18} /> Auditoria
               </Link>
-              <Link to="/equipe" style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', gap: '5px' }}>
+              <Link to="/equipe" style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', gap: '5px', alignItems: 'center' }}>
                 <Users size={18} /> Equipe
               </Link>
             </>

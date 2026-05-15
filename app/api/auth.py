@@ -13,6 +13,9 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(req.senha, user.senha_hash):
         raise HTTPException(status_code=401, detail="E-mail ou senha inválidos")
 
+    if not user.ativo:
+        raise HTTPException(status_code=403, detail="Usuário inativo. Contate o administrador.")
+
     if user.exige_troca_senha:
         return {
             "require_password_change": True,
