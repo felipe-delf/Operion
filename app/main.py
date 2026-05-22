@@ -13,6 +13,7 @@ from app.core.security import get_password_hash
 from app.models.user import UserModel
 from app.models.audit import AuditRuleModel, AuditGroupModel  # Garante criação das tabelas audit_rules e audit_groups
 from app.models.agent import PcStatusSnapshot  # Garante que a tabela seja criada
+from app.models.execution_log import ExecutionLogModel  # Garante criação da tabela de logs de execução
 
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
@@ -25,10 +26,10 @@ create_tables()
 
 # Popula banco com Super Admin se não existir
 db = SessionLocal()
-if not db.query(UserModel).filter(UserModel.email == "admin@promofarma").first():
+if not db.query(UserModel).filter(UserModel.email == "admin@empresa.com").first():
     super_admin = UserModel(
-        email="admin@promofarma",
-        senha_hash=get_password_hash("Promo@25"),
+        email="admin@empresa.com",
+        senha_hash=get_password_hash("Admin@123"),
         role="Admin",
         exige_troca_senha=False
     )

@@ -21,12 +21,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set work directory
 WORKDIR /app
 
+# Create a non-privileged system user and group (UID/GID 10001) to run the container safely
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -m -s /bin/bash appuser
+
 # Copy requirements and install them
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy project files
 COPY . .
+
+# Grant ownership of the work directory to the unprivileged user so it can write the SQLite db
+RUN chown -R appuser:appgroup /app
+
+# Switch to the non-privileged user
+USER appuser
 
 # Expose port
 EXPOSE 8080

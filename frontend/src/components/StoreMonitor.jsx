@@ -488,21 +488,50 @@ export default function StoreMonitor() {
 
             {jobStatus ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-                {jobStatus.etapas.map((etapa, idx) => (
-                  <div key={idx} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px',
-                    borderLeft: etapa.status === 'rodando' ? '3px solid #f59e0b' : etapa.status === 'sucesso' ? '3px solid #34d399' : etapa.status === 'erro' ? '3px solid #ef4444' : '3px solid transparent'
-                  }}>
-                    <span style={{ fontWeight: 500 }}>{etapa.nome}</span>
-                    <span>
-                      {etapa.status === 'pendente' && <span style={{ color: 'var(--text-muted)' }}>Aguardando...</span>}
-                      {etapa.status === 'rodando' && <span style={{ color: '#f59e0b' }}>⏳ Conectando</span>}
-                      {etapa.status === 'sucesso' && <span style={{ color: '#34d399' }}>✅ Finalizado</span>}
-                      {etapa.status === 'erro' && <span style={{ color: '#ef4444' }}>❌ Falha</span>}
-                    </span>
-                  </div>
-                ))}
+                {jobStatus.etapas.map((etapa, idx) => {
+                  const isOffline = etapa.status === 'erro' && etapa.detalhe &&
+                    (etapa.detalhe.toLowerCase().includes('offline') || etapa.detalhe.toLowerCase().includes('porta 1433'));
+                  const borderColor = etapa.status === 'rodando' ? '#f59e0b'
+                    : etapa.status === 'sucesso' ? '#34d399'
+                    : isOffline ? '#f97316'
+                    : etapa.status === 'erro' ? '#ef4444'
+                    : 'transparent';
+                  return (
+                    <div key={idx} style={{
+                      background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px',
+                      borderLeft: `3px solid ${borderColor}`,
+                      display: 'flex', flexDirection: 'column', gap: '6px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ fontWeight: 500 }}>{etapa.nome}</span>
+                        <span>
+                          {etapa.status === 'pendente' && <span style={{ color: 'var(--text-muted)' }}>Aguardando...</span>}
+                          {etapa.status === 'rodando' && <span style={{ color: '#f59e0b' }}>⏳ Conectando</span>}
+                          {etapa.status === 'sucesso' && <span style={{ color: '#34d399' }}>✅ Finalizado</span>}
+                          {etapa.status === 'erro' && isOffline && (
+                            <span style={{ color: '#f97316', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <WifiOff size={14} /> Offline
+                            </span>
+                          )}
+                          {etapa.status === 'erro' && !isOffline && <span style={{ color: '#ef4444' }}>❌ Falha</span>}
+                        </span>
+                      </div>
+                      {etapa.status === 'erro' && etapa.detalhe && (
+                        <div style={{
+                          fontSize: '11px',
+                          color: isOffline ? '#fed7aa' : '#fca5a5',
+                          background: isOffline ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
+                          borderRadius: '4px', padding: '6px 8px', fontFamily: 'monospace',
+                          wordBreak: 'break-all', maxHeight: '80px', overflowY: 'auto'
+                        }}>
+                          {etapa.detalhe}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+
                 {jobStatus.status === 'concluido' && (
                   <div style={{ marginTop: '20px', textAlign: 'center', color: '#34d399', fontWeight: 'bold', fontSize: '1.1rem' }}>
                     🎉 Missão Cumprida! Script executado em todos os alvos.

@@ -30,7 +30,7 @@ DATABASE_URL=sqlite:///./parametrizacao.db
 
 # 3. Credenciais da Retaguarda
 RETAGUARDA_IP=10.10.0.3
-RETAGUARDA_DB=PBS_PROMOFARMA_DADOS
+RETAGUARDA_DB=RETAGUARDA_PRODUCAO
 RETAGUARDA_USER=usuario_aqui
 RETAGUARDA_PWD=senha_aqui
 

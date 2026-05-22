@@ -31,9 +31,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("id")
-        role = payload.get("role")
+        role    = payload.get("role")
+        email   = payload.get("sub")  # "sub" guarda o e-mail no token
         if user_id is None:
             raise HTTPException(status_code=401, detail="Token inválido")
-        return {"id": user_id, "role": role}
-    except jwt.JWTError:
+        return {"id": user_id, "role": role, "email": email}
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Token expirado ou inválido")

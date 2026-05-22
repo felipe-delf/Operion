@@ -11,6 +11,7 @@ export default function AdminScripts() {
   const [sqlServidor, setSqlServidor] = useState('');
   const [sqlPdv, setSqlPdv] = useState('');
   const [exigeCaixa, setExigeCaixa] = useState(false);
+  const [alvoFixo, setAlvoFixo] = useState('');
   const [publicado, setPublicado] = useState(true);
   const navigate = useNavigate();
 
@@ -42,7 +43,7 @@ export default function AdminScripts() {
 
   const resetForm = () => {
     setEditandoId(null);
-    setNome(''); setDescricao(''); setSqlServidor(''); setSqlPdv(''); setExigeCaixa(false); setPublicado(true);
+    setNome(''); setDescricao(''); setSqlServidor(''); setSqlPdv(''); setExigeCaixa(false); setAlvoFixo(''); setPublicado(true);
   };
 
   const handleEditClick = (script) => {
@@ -52,6 +53,7 @@ export default function AdminScripts() {
     setSqlServidor(script.sql_servidor || '');
     setSqlPdv(script.sql_pdv || '');
     setExigeCaixa(script.parametros_exigidos?.includes('caixa'));
+    setAlvoFixo(script.alvo_fixo || '');
     setPublicado(script.publicado);
   };
 
@@ -89,7 +91,8 @@ export default function AdminScripts() {
         sql_servidor: sqlServidor,
         sql_pdv: sqlPdv,
         parametros_exigidos,
-        publicado
+        publicado,
+        alvo_fixo: alvoFixo || null
       })
     });
 
@@ -127,29 +130,68 @@ export default function AdminScripts() {
               <input type="text" value={descricao} onChange={e => setDescricao(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
             
-            <div style={{ marginBottom: '1rem', display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '6px' }}>
-              <input type="checkbox" checked={exigeCaixa} onChange={e => setExigeCaixa(e.target.checked)} style={{ width: '20px', height: '20px' }} />
-              <label style={{ margin: 0, fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div 
+              style={{ marginBottom: '1rem', display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '6px', cursor: 'help' }}
+              title="O QUE FAZ: Obriga o suporte a informar o número do caixa antes de rodar. O robô substitui a variável {caixa} no SQL pelo número digitado.&#13;&#13;QUANDO UTILIZAR: Use em scripts de correção de PDV que contenham filtros específicos ou caminhos baseados no número do terminal (ex: WHERE NumeroPdv = {caixa})."
+            >
+              <input type="checkbox" checked={exigeCaixa} onChange={e => setExigeCaixa(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'help' }} />
+              <label style={{ margin: 0, fontWeight: 'bold', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'help' }}>
                 Este script exige que o usuário digite o Número do Caixa?
-                <HelpCircle size={16} title="Marcando isso, o Suporte será obrigado a informar o número do caixa. O texto {caixa} no SQL será substituído pelo número digitado." style={{ cursor: 'help' }} />
+                <HelpCircle size={16} />
               </label>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#34d399' }}><Server size={16} /> SQL do Banco da Loja</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#34d399' }}>
+                <Server size={16} /> SQL do Banco da Loja
+                <HelpCircle 
+                  size={14} 
+                  title="O QUE FAZ: Código SQL que será executado no banco de dados do Servidor da Loja (RETAGUARDA).&#13;&#13;QUANDO UTILIZAR: Sempre que precisar alterar tabelas da Retaguarda, tabelas de controle de filiais ou realizar SELECTs/UPDATEs gerais no servidor principal da loja." 
+                  style={{ cursor: 'help', color: 'var(--text-muted)' }} 
+                />
+              </label>
               <textarea value={sqlServidor} onChange={e => setSqlServidor(e.target.value)} rows="5" placeholder="USE LOJA; ..." style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', fontFamily: 'monospace' }}></textarea>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#818cf8' }}><Database size={16} /> SQL do Banco do PDV</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#818cf8' }}>
+                <Database size={16} /> SQL do Banco do PDV
+                <HelpCircle 
+                  size={14} 
+                  title="O QUE FAZ: Código SQL que será executado no banco de dados do Caixa/PDV.&#13;&#13;QUANDO UTILIZAR: Sempre que a alteração for em tabelas locais do caixa (tabelas de vendas locais, parâmetros do terminal, configurações de cupom local, etc.)." 
+                  style={{ cursor: 'help', color: 'var(--text-muted)' }} 
+                />
+              </label>
               <textarea value={sqlPdv} onChange={e => setSqlPdv(e.target.value)} rows="5" placeholder="USE PDV; ..." style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', fontFamily: 'monospace' }}></textarea>
             </div>
 
-            <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <input type="checkbox" checked={publicado} onChange={e => setPublicado(e.target.checked)} style={{ width: '20px', height: '20px' }} />
-              <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px' }}>
+                Travar Alvo de Execução (Opcional)
+                <HelpCircle 
+                  size={16} 
+                  title="O QUE FAZ: Restringe a execução deste script a um destino fixo, desabilitando a escolha do usuário no momento de rodar.&#13;&#13;QUANDO UTILIZAR: Sempre que o SQL for específico para um tipo de banco. Ex: Se o SQL usa 'USE PDV', trave em 'Apenas todos os caixas' ou 'Apenas um caixa específico' para evitar que o suporte tente rodar acidentalmente no servidor." 
+                  style={{ cursor: 'help', color: 'var(--text-muted)' }} 
+                />
+              </label>
+              <select value={alvoFixo} onChange={e => setAlvoFixo(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <option value="" title="O QUE FAZ: Permite que o operador escolha livremente onde rodar.&#13;&#13;QUANDO UTILIZAR: Use para scripts muito genéricos ou que possam se aplicar a qualquer cenário conforme a necessidade do suporte.">Deixar usuário escolher no momento da execução</option>
+                <option value="AMBOS" title="O QUE FAZ: Trava a execução para rodar simultaneamente no Servidor e em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts globais de parametrização completa da filial.">Todos os Servidores e Todos os Caixas</option>
+                <option value="TODOS_PDVS" title="O QUE FAZ: Trava a execução para rodar em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts de alteração em massa nos PDVs (ex: alteração de configuração de cupom ou carga de dados em todos os caixas).">Apenas Todos os Caixas</option>
+                <option value="SERVIDOR" title="O QUE FAZ: Trava a execução para rodar apenas no banco RETAGUARDA do Servidor.&#13;&#13;QUANDO UTILIZAR: Use para scripts que afetam apenas tabelas da retaguarda local da filial (ex: ajustes de cargas, integrações locais).">Apenas os Servidores (LOJA)</option>
+                <option value="SERVIDOR_PDV" title="O QUE FAZ: Trava a execução para rodar no banco do PDV localizado dentro do servidor da loja.&#13;&#13;QUANDO UTILIZAR: Use quando a base do PDV centralizada no servidor precisar sofrer alterações.">Servidores (PDV)</option>
+                <option value="PDV_ESPECIFICO" title="O QUE FAZ: Trava a execução para rodar em apenas um caixa específico digitado pelo operador.&#13;&#13;QUANDO UTILIZAR: Use para correções pontuais de erros ou falhas locais em um terminal específico da loja.">Apenas um Caixa Específico</option>
+              </select>
+            </div>
+
+            <div 
+              style={{ marginBottom: '1.5rem', display: 'flex', gap: '10px', alignItems: 'center', cursor: 'help' }}
+              title="O QUE FAZ: Define a visibilidade do script para a equipe técnica nas lojas.&#13;&#13;QUANDO UTILIZAR: Deixe desmarcado (Rascunho) enquanto estiver testando ou refinando o SQL. Marque (Publicado) apenas quando o script estiver pronto, testado e homologado para uso do suporte nas lojas."
+            >
+              <input type="checkbox" checked={publicado} onChange={e => setPublicado(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'help' }} />
+              <label style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'help' }}>
                 Publicar agora (Ficará visível nas lojas)
-                <HelpCircle size={16} title="Se não marcar, o script ficará como Rascunho, visível apenas para você aqui no Cofre." style={{ cursor: 'help', color: 'var(--text-muted)' }} />
+                <HelpCircle size={16} style={{ color: 'var(--text-muted)' }} />
               </label>
             </div>
 
@@ -177,7 +219,23 @@ export default function AdminScripts() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{s.nome}</h4>
-                    {s.publicado ? <span className="tag" style={{ background: 'rgba(52, 211, 153, 0.2)', color: '#34d399' }}>Publicado</span> : <span className="tag" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }}>Rascunho</span>}
+                    {s.publicado ? (
+                      <span 
+                        className="tag" 
+                        style={{ background: 'rgba(52, 211, 153, 0.2)', color: '#34d399', cursor: 'help' }}
+                        title="O QUE SIGNIFICA: Este script está ativo e visível para execução pelo suporte nas lojas."
+                      >
+                        Publicado
+                      </span>
+                    ) : (
+                      <span 
+                        className="tag" 
+                        style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'help' }}
+                        title="O QUE SIGNIFICA: Este script está salvo apenas como rascunho. O suporte não consegue visualizá-lo ou executá-lo nas lojas."
+                      >
+                        Rascunho
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button onClick={() => handleEditClick(s)} style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '5px' }} title="Editar">
@@ -189,9 +247,22 @@ export default function AdminScripts() {
                   </div>
                 </div>
                 <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{s.descricao || "Sem descrição"}</p>
-                <div style={{ display: 'flex', gap: '10px', fontSize: '0.8rem' }}>
+                <div style={{ display: 'flex', gap: '10px', fontSize: '0.8rem', flexWrap: 'wrap' }}>
                   {s.parametros_exigidos && s.parametros_exigidos.length > 0 && (
-                    <span style={{ color: '#f59e0b' }}>⚠️ Exige Parâmetros: {s.parametros_exigidos.join(', ')}</span>
+                    <span 
+                      style={{ color: '#f59e0b', cursor: 'help' }}
+                      title="O QUE SIGNIFICA: Ao executar, o suporte será obrigado a informar o número do caixa específico para preencher a variável {caixa} no SQL."
+                    >
+                      ⚠️ Exige Parâmetros: {s.parametros_exigidos.join(', ')}
+                    </span>
+                  )}
+                  {s.alvo_fixo && (
+                    <span 
+                      style={{ color: '#818cf8', cursor: 'help', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      title={`Este script está travado para rodar apenas no alvo: ${s.alvo_fixo}. O suporte não poderá alterar o destino na hora de executar, proporcionando segurança máxima.`}
+                    >
+                      🔒 Alvo Fixo: {s.alvo_fixo}
+                    </span>
                   )}
                 </div>
               </div>
