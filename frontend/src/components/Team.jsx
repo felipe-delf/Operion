@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, KeyRound, ShieldAlert, X, Pencil, CheckCircle, XCircle } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080';
+const API = `http://${window.location.hostname}:8080`;
 
 export default function Team() {
   const [usuarios, setUsuarios] = useState([]);

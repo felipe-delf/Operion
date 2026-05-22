@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Monitor, Wifi, WifiOff, AlertTriangle, RefreshCw, Server, ShoppingCart,
          User, Clock, Cpu, MemoryStick, Database, Network, HardDrive } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080/api';
+const API = `http://${window.location.hostname}:8080/api`;
 
 function formatUptime(s) {
   if (s == null) return '—';

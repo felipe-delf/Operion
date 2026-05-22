@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Radio, Play, AlertTriangle, X, Search, CheckCircle, XCircle, WifiOff, RefreshCw, HelpCircle, ArrowLeft } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080/api';
+const API = `http://${window.location.hostname}:8080/api`;
 
 export default function MassExecution() {
   const navigate = useNavigate();

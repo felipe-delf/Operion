@@ -23,7 +23,7 @@ export default function ChangePassword() {
     }
 
     try {
-      const res = await fetch(`http://127.0.0.1:8080/api/auth/mudar_senha/${userId}`, {
+      const res = await fetch(`http://${window.location.hostname}:8080/api/auth/mudar_senha/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nova_senha: senha })

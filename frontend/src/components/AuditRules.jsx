@@ -5,7 +5,7 @@ import {
   X, FolderPlus, Layers, Database, TextCursor
 } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080';
+const API = `http://${window.location.hostname}:8080`;
 
 const inputStyle = {
   width: '100%', padding: '9px 12px', marginTop: '6px', borderRadius: '8px',

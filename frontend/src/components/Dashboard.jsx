@@ -9,7 +9,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://127.0.0.1:8080/api/lojas/', {
+    fetch(`http://${window.location.hostname}:8080/api/lojas/`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())

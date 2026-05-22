@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Search, X, RefreshCw, User, Building2, Calendar, Target, Hash } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080/api';
+const API = `http://${window.location.hostname}:8080/api`;
 
 const ALVO_LABEL = {
   AMBOS:           'Servidor + Todos Caixas',

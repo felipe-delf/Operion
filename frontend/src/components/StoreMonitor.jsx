@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Server, Monitor, Play, ArrowLeft, X, WifiOff, AlertTriangle, RefreshCw,
          User, Clock, Cpu, MemoryStick, Network, HardDrive, Database, HelpCircle } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080/api';
+const API = `http://${window.location.hostname}:8080/api`;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatUptime(s) {
