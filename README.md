@@ -29,23 +29,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES=600
 DATABASE_URL=sqlite:///./parametrizacao.db
 
 # 3. Credenciais da Retaguarda
-<<<<<<< HEAD
-RETAGUARDA_IP=127.0.0.1
-=======
 RETAGUARDA_IP=SERVIDOR
->>>>>>> db6bc5abfdad37e1ec9ba04fa1d3f18e3921af3d
 RETAGUARDA_DB=RETAGUARDA_PRODUCAO
 RETAGUARDA_USER=usuario_aqui
 RETAGUARDA_PWD=senha_aqui
 
 # 4. Credenciais das Lojas (Servidores e PDVs - ODBC)
-<<<<<<< HEAD
-LOJAS_UID=sa
-LOJAS_PWD=sua_senha_aqui
-=======
 LOJAS_UID=USUARIO
 LOJAS_PWD=SENHA
->>>>>>> db6bc5abfdad37e1ec9ba04fa1d3f18e3921af3d
 ```
 
 > **Atenção:** Se não tiver o arquivo `parametrizacao.db`, o FastAPI vai criá-lo automaticamente ao rodar, porém vazio (sem usuário). Você precisará criá-lo via script ou via API.
