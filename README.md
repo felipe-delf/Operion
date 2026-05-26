@@ -1,8 +1,8 @@
-# Argus
+# Operion
 
-[![CI — Testes Automatizados](https://github.com/felipe-delf/PromoSync/actions/workflows/ci.yml/badge.svg)](https://github.com/felipe-delf/PromoSync/actions/workflows/ci.yml)
+[![CI — Testes Automatizados](https://github.com/felipe-delf/Operion/actions/workflows/ci.yml/badge.svg)](https://github.com/felipe-delf/Operion/actions/workflows/ci.yml)
 
-**Argus** é uma plataforma open-source de parametrização, auditoria e monitoramento para redes de varejo. Permite executar scripts SQL remotos em Servidores e PDVs das lojas, com controle granular de acesso (RBAC), dashboard em tempo real e auditoria de execuções.
+**Operion** é uma plataforma open-source de parametrização, auditoria e monitoramento para redes de varejo. Permite executar scripts SQL remotos em Servidores e PDVs das lojas, com controle granular de acesso (RBAC), dashboard em tempo real e auditoria de execuções.
 
 ## ✨ Funcionalidades
 

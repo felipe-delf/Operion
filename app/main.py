@@ -121,7 +121,7 @@ finally:
     db.close()
 
 app = FastAPI(
-    title="Argus API",
+    title="Operion API",
     description="API para o Gerenciador de Automações, Parametrizações e Monitor de Lojas",
     version="2.0.0"
 )
@@ -143,4 +143,4 @@ app.include_router(scripts_router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {"message": "API Argus v2.0 Online. Acesse /docs para a documentação interativa."}
+    return {"message": "API Operion v2.0 Online. Acesse /docs para a documentação interativa."}
