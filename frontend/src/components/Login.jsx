@@ -48,7 +48,7 @@ export default function Login() {
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
           <ShieldCheck size={64} color="#818cf8" />
         </div>
-        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>RetailDesk</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>Argus</h2>
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '2rem' }}>Acesso Restrito</p>
         
         {erro && <div style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>{erro}</div>}

@@ -86,7 +86,7 @@ function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
           <Shield size={24} color="#818cf8" />
-          <h1>RetailDesk</h1>
+          <h1>Argus</h1>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>

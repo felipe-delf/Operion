@@ -1,8 +1,8 @@
-# RetailDesk
+# Argus
 
-[![CI — Testes Automatizados](https://github.com/SEU_USUARIO/RetailDesk/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/RetailDesk/actions/workflows/ci.yml)
+[![CI — Testes Automatizados](https://github.com/SEU_USUARIO/Argus/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/Argus/actions/workflows/ci.yml)
 
-**RetailDesk** é uma plataforma open-source de parametrização, auditoria e monitoramento para redes de varejo. Permite executar scripts SQL remotos em Servidores e PDVs das lojas, com controle granular de acesso (RBAC), dashboard em tempo real e auditoria de execuções.
+**Argus** é uma plataforma open-source de parametrização, auditoria e monitoramento para redes de varejo. Permite executar scripts SQL remotos em Servidores e PDVs das lojas, com controle granular de acesso (RBAC), dashboard em tempo real e auditoria de execuções.
 
 ## ✨ Funcionalidades
 
