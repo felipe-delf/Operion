@@ -33,8 +33,11 @@ export default function AdminScripts() {
   };
 
   useEffect(() => {
-    if (localStorage.getItem('role') !== 'Admin') {
-      alert('Acesso Negado: Apenas Administradores.');
+    const activeRole = localStorage.getItem('role');
+    const permissions = localStorage.getItem('permissions') || '';
+    
+    if (activeRole !== 'TI' && activeRole !== 'Administradores' && activeRole !== 'Admin' && !permissions.includes('GERENCIAR_COFRE')) {
+      alert('Acesso Negado: Você não tem permissão para gerenciar o cofre SQL.');
       navigate('/dashboard');
       return;
     }
@@ -123,11 +126,11 @@ export default function AdminScripts() {
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '1rem' }}>
               <label>Nome do Script (Ficará visível no botão)</label>
-              <input type="text" value={nome} onChange={e => setNome(e.target.value)} required placeholder="Ex: Ativar Epharma" style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <input type="text" value={nome} onChange={e => setNome(e.target.value)} required placeholder="Ex: Ativar Epharma" className="form-input" style={{ marginTop: "5px" }} />
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label>Descrição Opcional</label>
-              <input type="text" value={descricao} onChange={e => setDescricao(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <input type="text" value={descricao} onChange={e => setDescricao(e.target.value)} className="form-input" style={{ marginTop: "5px" }} />
             </div>
             
             <div 
@@ -150,7 +153,7 @@ export default function AdminScripts() {
                   style={{ cursor: 'help', color: 'var(--text-muted)' }} 
                 />
               </label>
-              <textarea value={sqlServidor} onChange={e => setSqlServidor(e.target.value)} rows="5" placeholder="USE LOJA; ..." style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', fontFamily: 'monospace' }}></textarea>
+              <textarea value={sqlServidor} onChange={e => setSqlServidor(e.target.value)} rows="5" placeholder="USE LOJA; ..." className="form-input" style={{ marginTop: "5px", fontFamily: "monospace", minHeight: "120px" }}></textarea>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
@@ -162,7 +165,7 @@ export default function AdminScripts() {
                   style={{ cursor: 'help', color: 'var(--text-muted)' }} 
                 />
               </label>
-              <textarea value={sqlPdv} onChange={e => setSqlPdv(e.target.value)} rows="5" placeholder="USE PDV; ..." style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '6px', background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', fontFamily: 'monospace' }}></textarea>
+              <textarea value={sqlPdv} onChange={e => setSqlPdv(e.target.value)} rows="5" placeholder="USE PDV; ..." className="form-input" style={{ marginTop: "5px", fontFamily: "monospace", minHeight: "120px" }}></textarea>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
@@ -174,7 +177,7 @@ export default function AdminScripts() {
                   style={{ cursor: 'help', color: 'var(--text-muted)' }} 
                 />
               </label>
-              <select value={alvoFixo} onChange={e => setAlvoFixo(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <select value={alvoFixo} onChange={e => setAlvoFixo(e.target.value)} className="form-select">
                 <option value="" title="O QUE FAZ: Permite que o operador escolha livremente onde rodar.&#13;&#13;QUANDO UTILIZAR: Use para scripts muito genéricos ou que possam se aplicar a qualquer cenário conforme a necessidade do suporte.">Deixar usuário escolher no momento da execução</option>
                 <option value="AMBOS" title="O QUE FAZ: Trava a execução para rodar simultaneamente no Servidor e em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts globais de parametrização completa da filial.">Todos os Servidores e Todos os Caixas</option>
                 <option value="TODOS_PDVS" title="O QUE FAZ: Trava a execução para rodar em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts de alteração em massa nos PDVs (ex: alteração de configuração de cupom ou carga de dados em todos os caixas).">Apenas Todos os Caixas</option>
@@ -263,6 +266,18 @@ export default function AdminScripts() {
                     >
                       🔒 Alvo Fixo: {s.alvo_fixo}
                     </span>
+                  )}
+                </div>
+                {/* Metadados de Autoria (Audit) */}
+                <div style={{ 
+                  marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', 
+                  display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.75rem', color: '#64748b' 
+                }}>
+                  {s.criado_por && (
+                    <span>✍️ Criado por: <strong style={{ color: '#94a3b8' }}>{s.criado_por}</strong></span>
+                  )}
+                  {s.modificado_por && s.modificado_por !== s.criado_por && (
+                    <span>✏️ Modificado por: <strong style={{ color: '#94a3b8' }}>{s.modificado_por}</strong></span>
                   )}
                 </div>
               </div>

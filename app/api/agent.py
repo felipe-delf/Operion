@@ -37,6 +37,11 @@ def _upsert_snapshot(db: Session, data: dict):
         existing.cpu_nucleos   = data.get("cpu_nucleos")
         existing.ram_total_mb  = data.get("ram_total_mb")
         existing.db_size_mb    = data.get("db_size_mb")
+        existing.db_mdf_size_mb = data.get("db_mdf_size_mb")
+        existing.db_ldf_size_mb = data.get("db_ldf_size_mb")
+        existing.disco_total_gb = data.get("disco_total_gb")
+        existing.disco_livre_gb = data.get("disco_livre_gb")
+        existing.backup_dias_atras = data.get("backup_dias_atras")
         # OS
         existing.os_version    = data.get("os_version")
         existing.uptime_segundos = data.get("uptime_segundos")
@@ -62,6 +67,11 @@ def _upsert_snapshot(db: Session, data: dict):
             cpu_nucleos=data.get("cpu_nucleos"),
             ram_total_mb=data.get("ram_total_mb"),
             db_size_mb=data.get("db_size_mb"),
+            db_mdf_size_mb=data.get("db_mdf_size_mb"),
+            db_ldf_size_mb=data.get("db_ldf_size_mb"),
+            disco_total_gb=data.get("disco_total_gb"),
+            disco_livre_gb=data.get("disco_livre_gb"),
+            backup_dias_atras=data.get("backup_dias_atras"),
             # OS
             os_version=data.get("os_version"),
             uptime_segundos=data.get("uptime_segundos"),
@@ -93,7 +103,7 @@ def _run_scan_background(loja_id: int):
         for res in resultados:
             _upsert_snapshot(db, res)
     except Exception as e:
-        print(f"[ERRO] [WMI SCAN] Erro no scan da loja {loja_id}: {e}")
+        print(f"❌ [WMI SCAN] Erro no scan da loja {loja_id}: {e}")
     finally:
         db.close()
         _scan_running.discard(loja_id)

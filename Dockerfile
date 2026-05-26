@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Enable legacy TLS 1.0/1.1 and legacy providers in OpenSSL for compatibility with older SQL Servers (e.g. 2008 R2)
+RUN python -c "import re; path = '/etc/ssl/openssl.cnf'; content = open(path).read(); content = re.sub(r'\[openssl_init\]', '[openssl_init]\\nssl_conf = ssl_sect', content); content = re.sub(r'\[provider_sect\]', '[provider_sect]\\ndefault = default_sect\\nlegacy = legacy_sect', content); content = re.sub(r'\[default_sect\](\s*#?\s*activate\s*=\s*1)?', '[default_sect]\\nactivate = 1\\n\\n[legacy_sect]\\nactivate = 1', content); content += '\\n\\n[ssl_sect]\\nsystem_default = system_default_sect\\n\\n[system_default_sect]\\nCipherString = DEFAULT@SECLEVEL=0\\nMinProtocol = TLSv1\\n'; open(path, 'w').write(content)"
+
 # Set work directory
 WORKDIR /app
 

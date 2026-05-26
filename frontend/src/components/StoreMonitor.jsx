@@ -19,9 +19,15 @@ function formatRam(mb) {
   return mb >= 1024 ? `${(mb / 1024).toFixed(0)} GB` : `${mb} MB`;
 }
 
-function formatDbSize(mb) {
+function formatDbSize(mb, mdfMb, ldfMb) {
   if (mb == null) return null;
-  return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb} MB`;
+  const totalStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb} MB`;
+  if (mdfMb != null && ldfMb != null) {
+    const mdfStr = mdfMb >= 1024 ? `${(mdfMb / 1024).toFixed(2)} GB` : `${mdfMb} MB`;
+    const ldfStr = ldfMb >= 1024 ? `${(ldfMb / 1024).toFixed(2)} GB` : `${ldfMb} MB`;
+    return `${totalStr} (MDF: ${mdfStr} | LDF: ${ldfStr})`;
+  }
+  return totalStr;
 }
 
 function sqlVersionToYear(version) {
@@ -62,7 +68,7 @@ function PcInfoChip({ icon, label, value, color }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#475569', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         <span style={{ color, display: 'flex' }}>{icon}</span> {label}
       </div>
-      <div style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>
         {value}
       </div>
     </div>
@@ -80,20 +86,172 @@ function WmiPanel({ pcData }) {
 
   if (pcData.status === 'sem_wmi') return (
     <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#f59e0b' }}>
-      <AlertTriangle size={12} /> Não foi possível obter dados do PC
+      <AlertTriangle size={12} /> Sem conexão SQL (ODBC) ativa no PC
     </div>
   );
 
   const sqlYear  = sqlVersionToYear(pcData.sql_version);
   const sqlShort = sqlEditionShort(pcData.sql_edition);
 
+  const diskTotal = pcData.disco_total_gb;
+  const diskFree = pcData.disco_livre_gb;
+  const isExpress = pcData.sql_edition && pcData.sql_edition.toLowerCase().includes('express');
+  const dbMdfMB = pcData.db_mdf_size_mb ?? pcData.db_size_mb ?? 0;
+  const dbLdfMB = pcData.db_ldf_size_mb ?? 0;
+  const dbMdfGB = dbMdfMB / 1024;
+  const dbLdfGB = dbLdfMB / 1024;
+  const isMdfLimitNear = isExpress && dbMdfGB > 8.5; // MDF perto do limite de 10GB
+  const isLdfLarge = isExpress && dbLdfGB > 10.0; // LDF muito acumulado (> 10GB)
+
+  const renderDiskSpace = () => {
+    if (diskFree == null) return null;
+    if (diskTotal == null) {
+      return (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <PcInfoChip 
+            icon={<HardDrive size={10} />} 
+            label="Espaço Livre" 
+            value={`${diskFree} GB livres`} 
+            color="#38bdf8" 
+          />
+        </div>
+      );
+    }
+    const percentUsed = Math.round(((diskTotal - diskFree) / diskTotal) * 100);
+    const freePercent = 100 - percentUsed;
+    const barColor = freePercent < 10 ? '#ef4444' : freePercent < 15 ? '#f59e0b' : '#34d399';
+    return (
+      <div style={{
+        gridColumn: '1 / -1',
+        background: 'rgba(255,255,255,0.04)', borderRadius: 7,
+        padding: '7px 9px', border: `1px solid rgba(255,255,255,0.08)`,
+        display: 'flex', flexDirection: 'column', gap: 4
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#475569', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <HardDrive size={10} color={barColor} /> Espaço em Disco
+          </div>
+          <span style={{ fontSize: 10, fontWeight: 600, color: freePercent < 12 ? barColor : '#94a3b8' }}>
+            {diskFree} GB livres ({freePercent}%)
+          </span>
+        </div>
+        <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden', marginTop: 2 }}>
+          <div style={{ width: `${percentUsed}%`, height: '100%', background: barColor, borderRadius: 3, transition: 'width 0.4s ease' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#475569' }}>
+          <span>{diskTotal - diskFree} GB Usados</span>
+          <span>Total: {diskTotal} GB</span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderBackupAge = () => {
+    const dias = pcData.backup_dias_atras;
+    if (dias == null) {
+      if (pcData.tipo === 'SERVIDOR') {
+        return (
+          <div style={{
+            gridColumn: '1 / -1', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 9px', borderRadius: 7, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            color: '#f87171', fontSize: 10, fontWeight: 600
+          }}>
+            🚨 ALERTA CRÍTICO: Sem histórico de backup no SQL Server!
+          </div>
+        );
+      }
+      return null;
+    }
+
+    let bg, border, color, text;
+    if (dias <= 1) {
+      bg = 'rgba(52,211,153,0.1)';
+      border = 'rgba(52,211,153,0.3)';
+      color = '#34d399';
+      text = `✅ Backup em dia (${dias === 0 ? 'Realizado hoje' : 'Realizado ontem'})`;
+    } else if (dias <= 3) {
+      bg = 'rgba(245,158,11,0.1)';
+      border = 'rgba(245,158,11,0.3)';
+      color = '#fbbf24';
+      text = `⚠️ Backup pendente (${dias} dias atrás)`;
+    } else {
+      bg = 'rgba(239,68,68,0.1)';
+      border = 'rgba(239,68,68,0.3)';
+      color = '#f87171';
+      text = `🚨 Backup CRÍTICO: Executado há ${dias} dias!`;
+    }
+
+    return (
+      <div style={{
+        gridColumn: '1 / -1', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6,
+        padding: '6px 9px', borderRadius: 7, background: bg, border: `1px solid ${border}`,
+        color: color, fontSize: 10, fontWeight: 600
+      }}>
+        {text}
+      </div>
+    );
+  };
+
+  const renderExpressLimitWarning = () => {
+    if (!isMdfLimitNear && !isLdfLarge) return null;
+
+    if (isMdfLimitNear) {
+      const excedeu = dbMdfGB >= 10.0;
+      return (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(220,38,38,0.3) 100%)',
+          border: '1px solid rgba(239,68,68,0.45)',
+          borderRadius: 8, padding: '10px 12px', marginBottom: 8,
+          display: 'flex', flexDirection: 'column', gap: 3
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            color: '#fca5a5', fontWeight: 700, fontSize: 11
+          }}>
+            <AlertTriangle size={14} color="#f87171" />
+            {excedeu ? 'ALERTA EXPRESS EXCEDIDO:' : 'ALERTA EXPRESS PRÓXIMO:'} {dbMdfGB.toFixed(2)} GB / 10 GB (MDF de Dados)
+          </div>
+          <div style={{ fontSize: 10, color: '#fecaca' }}>
+            {excedeu
+              ? 'SQL Express excedeu o limite de 10GB de DADOS (MDF). Risco de travamento de escrita!'
+              : 'SQL Express próximo do limite de 10GB de DADOS (MDF). Faça uma limpeza para evitar travamentos.'}
+          </div>
+        </div>
+      );
+    }
+
+    // Se apenas o LDF estiver grande, exibe o alerta amarelo de manutenção (Logs)
+    return (
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(217,119,6,0.25) 100%)',
+        border: '1px solid rgba(245,158,11,0.4)',
+        borderRadius: 8, padding: '10px 12px', marginBottom: 8,
+        display: 'flex', flexDirection: 'column', gap: 3
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          color: '#fde047', fontWeight: 700, fontSize: 11
+        }}>
+          <AlertTriangle size={14} color="#fbbf24" />
+          ALERTA LOGS (LDF) ACUMULADOS: {dbLdfGB.toFixed(2)} GB de Logs
+        </div>
+        <div style={{ fontSize: 10, color: '#fef08a' }}>
+          O arquivo de log (LDF) está muito grande. Faça um encolhimento (Shrink) para liberar espaço no disco.
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ marginTop: 10 }}>
+      {renderExpressLimitWarning()}
       {/* Grid: CPU / RAM / IP / Uptime */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 6 }}>
         <PcInfoChip icon={<Cpu size={10} />}        label="CPU"    value={pcData.cpu_nucleos ? `${pcData.cpu_nucleos} núcleos` : null} color="#fbbf24" />
         <PcInfoChip icon={<MemoryStick size={10} />} label="RAM"    value={formatRam(pcData.ram_total_mb)}                               color="#34d399" />
-        <PcInfoChip icon={<Database size={10} />}    label="Banco"  value={formatDbSize(pcData.db_size_mb)}                              color="#f472b6" />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <PcInfoChip icon={<Database size={10} />}    label="Banco de Dados"  value={formatDbSize(pcData.db_size_mb, pcData.db_mdf_size_mb, pcData.db_ldf_size_mb)}                              color="#f472b6" />
+        </div>
         <PcInfoChip icon={<Network size={10} />}     label="IP"     value={pcData.ip_local || pcData.ip}                                  color="#60a5fa" />
         <PcInfoChip icon={<Clock size={10} />}       label="Uptime" value={formatUptime(pcData.uptime_segundos) ? `↑ ${formatUptime(pcData.uptime_segundos)}` : null} color="#a78bfa" />
         {pcData.os_version && (
@@ -101,6 +259,8 @@ function WmiPanel({ pcData }) {
             <PcInfoChip icon={<HardDrive size={10} />} label="Sistema" value={pcData.os_version} color="#94a3b8" />
           </div>
         )}
+        {renderDiskSpace()}
+        {renderBackupAge()}
       </div>
       {/* SQL Server badge */}
       {pcData.sql_version && (
@@ -340,14 +500,28 @@ export default function StoreMonitor() {
 
       {/* ── Ações (Scripts) ── */}
       <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Ações Disponíveis</h3>
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        {scripts.map(s => (
-          <button key={s.id} className="btn" onClick={() => abrirModal(s)}>
-            <Play size={18} /> {s.nome}
-          </button>
-        ))}
-        {scripts.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Nenhum script publicado pelo Admin.</span>}
-      </div>
+      {!(localStorage.getItem('permissions') || '').includes('EXECUTAR_SCRIPT') ? (
+        <div style={{
+          padding: '12px 16px',
+          background: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: '8px',
+          color: '#f87171',
+          fontSize: '13px',
+          marginBottom: '2rem'
+        }}>
+          🔒 Modo Leitura: Execuções de scripts no banco de dados estão restritas a TI e Suporte N2.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem', flexWrap: 'wrap' }}>
+          {scripts.map(s => (
+            <button key={s.id} className="btn" onClick={() => abrirModal(s)}>
+              <Play size={18} /> {s.nome}
+            </button>
+          ))}
+          {scripts.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Nenhum script publicado pelo Admin.</span>}
+        </div>
+      )}
 
       {/* ── Servidor ── */}
       <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Servidor</h3>
@@ -445,7 +619,7 @@ export default function StoreMonitor() {
       {/* ── MODAL DE EXECUÇÃO ── */}
       {modalAberto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-panel" style={{ padding: '2rem', width: '450px', position: 'relative' }}>
+          <div className="glass-panel modal-panel" style={{ padding: '2rem', width: '450px', position: 'relative' }}>
             <button onClick={() => setModalAberto(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
               <X size={20} />
             </button>
@@ -487,7 +661,7 @@ export default function StoreMonitor() {
       {/* ── MODAL RADAR AO VIVO ── */}
       {monitoramentoAberto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-panel" style={{ padding: '2rem', width: '500px', position: 'relative' }}>
+          <div className="glass-panel modal-panel" style={{ padding: '2rem', width: '500px', position: 'relative' }}>
             <h3 style={{ marginTop: 0, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Monitor size={20} color="#60a5fa" /> Radar de Execução Ao Vivo
             </h3>

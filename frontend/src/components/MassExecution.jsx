@@ -29,12 +29,16 @@ export default function MassExecution() {
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
-  // Redireciona se não for Admin
+  // Redireciona se não tiver permissão
   useEffect(() => {
-    if (role !== 'Admin') {
+    const activeRole = localStorage.getItem('role');
+    const permissions = localStorage.getItem('permissions') || '';
+
+    if (activeRole !== 'TI' && activeRole !== 'Administradores' && activeRole !== 'Admin' && !permissions.includes('EXECUTAR_BROADCAST')) {
+      alert('Acesso Negado: Você não tem permissão para disparar robôs globalmente.');
       navigate('/dashboard');
     }
-  }, [role, navigate]);
+  }, [navigate]);
 
   // Carrega scripts publicados
   useEffect(() => {
@@ -280,15 +284,7 @@ export default function MassExecution() {
                         placeholder="Ex: 50"
                         value={lojaDe}
                         onChange={e => setLojaDe(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          background: 'rgba(0,0,0,0.2)',
-                          color: 'white',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: '6px',
-                          fontSize: '13px'
-                        }}
+                        className="form-input"
                       />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -300,15 +296,7 @@ export default function MassExecution() {
                         placeholder="Ex: 90"
                         value={lojaAte}
                         onChange={e => setLojaAte(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          background: 'rgba(0,0,0,0.2)',
-                          color: 'white',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: '6px',
-                          fontSize: '13px'
-                        }}
+                        className="form-input"
                       />
                     </div>
                   </div>
@@ -323,15 +311,7 @@ export default function MassExecution() {
                       placeholder="Ex: 50, 60, 70"
                       value={lojasIds}
                       onChange={e => setLojasIds(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(0,0,0,0.2)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: '6px',
-                        fontSize: '13px'
-                      }}
+                      className="form-input"
                     />
                     <small style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: '4px' }}>
                       Digite os códigos das lojas destinos separados por vírgula. Ex: 50, 60, 70
@@ -400,15 +380,7 @@ export default function MassExecution() {
                         required
                         value={parametros[p] || ''} 
                         onChange={e => handleParamChange(p, e.target.value)} 
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          background: 'rgba(0,0,0,0.2)',
-                          color: 'white',
-                          border: '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: '6px',
-                          fontSize: '13px'
-                        }}
+                        className="form-input"
                         placeholder={`Digite o valor de {${p}}`}
                       />
                     </div>
@@ -502,7 +474,7 @@ export default function MassExecution() {
           zIndex: 1000,
           padding: '1.5rem'
         }}>
-          <div className="glass-panel" style={{
+          <div className="glass-panel modal-panel" style={{
             padding: '2rem',
             width: '100%',
             maxWidth: '650px',

@@ -56,9 +56,13 @@ export default function AuditRules() {
   };
 
   useEffect(() => {
-    if (localStorage.getItem('role') !== 'Admin') {
-      alert('Acesso Negado: Apenas Administradores.');
-      navigate('/dashboard'); return;
+    const activeRole = localStorage.getItem('role');
+    const permissions = localStorage.getItem('permissions') || '';
+    
+    if (activeRole !== 'TI' && activeRole !== 'Administradores' && activeRole !== 'Admin' && !permissions.includes('GERENCIAR_AUDITORIA')) {
+      alert('Acesso Negado: Você não tem permissão para gerenciar a auditoria.');
+      navigate('/dashboard'); 
+      return;
     }
     carregarTudo();
   }, [navigate]);
@@ -366,7 +370,7 @@ export default function AuditRules() {
       {/* ══ Modal Grupo ═════════════════════════════════════════════════════ */}
       {modalGrupoAberto && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-panel" style={{ padding: '2rem', width: '420px', position: 'relative' }}>
+          <div className="glass-panel modal-panel" style={{ padding: '2rem', width: '420px', position: 'relative' }}>
             <button onClick={() => setModalGrupoAberto(false)}
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
               <X size={20} />

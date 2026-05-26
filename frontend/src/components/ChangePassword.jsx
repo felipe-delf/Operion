@@ -34,6 +34,7 @@ export default function ChangePassword() {
       if (res.ok) {
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('role', data.role);
+        localStorage.setItem('permissions', data.permissions || '');
         navigate('/dashboard');
       } else {
         setErro(data.detail || 'Erro ao redefinir senha');

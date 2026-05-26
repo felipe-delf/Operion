@@ -22,9 +22,25 @@ def get_db():
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
-    try:
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE pc_status_snapshots ADD COLUMN db_size_mb BIGINT"))
-    except Exception:
-        pass
+    
+    # Lista de colunas a serem criadas incrementalmente nas tabelas existentes
+    migrations = [
+        ("pc_status_snapshots", "db_size_mb", "BIGINT"),
+        ("pc_status_snapshots", "db_mdf_size_mb", "BIGINT"),
+        ("pc_status_snapshots", "db_ldf_size_mb", "BIGINT"),
+        ("pc_status_snapshots", "disco_total_gb", "INTEGER"),
+        ("pc_status_snapshots", "disco_livre_gb", "INTEGER"),
+        ("pc_status_snapshots", "backup_dias_atras", "INTEGER"),
+        ("scripts", "criado_por", "VARCHAR(100)"),
+        ("scripts", "modificado_por", "VARCHAR(100)"),
+        ("usuarios", "grupo_id", "INTEGER"),
+    ]
+    
+    from sqlalchemy import text
+    for table, col, col_type in migrations:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+        except Exception:
+            # Engole erro se a coluna já existir
+            pass

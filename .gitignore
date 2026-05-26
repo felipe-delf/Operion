@@ -3,25 +3,42 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Variáveis de Ambiente (NUNCA commitar!)
 .env
 .env.*
 !.env.example
+
+# Banco de dados local (contém dados reais)
 parametrizacao.db
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# Ambientes virtuais Python
 venv/
 env/
 .venv/
+.env/
 
-# Node / Frontend Artifacts
+# Cobertura de testes
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+test-results/
+
+# Node / Frontend
 node_modules/
 dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .eslintcache
+.pnp
+.pnp.js
 
 # IDEs / Configurações locais
 .vscode/
@@ -35,3 +52,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Scripts temporários de desenvolvimento
+frontend/src/update_*.py

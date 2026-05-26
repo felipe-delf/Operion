@@ -26,7 +26,12 @@ class PcStatusSnapshot(Base):
     # ── Hardware ──────────────────────────────────────────────────
     cpu_nucleos  = Column(Integer, nullable=True)          # Quantidade de CPUs lógicas
     ram_total_mb = Column(BigInteger, nullable=True)       # RAM total em MB
-    db_size_mb   = Column(BigInteger, nullable=True)       # Tamanho do banco em MB
+    db_size_mb   = Column(BigInteger, nullable=True)       # Tamanho total do banco (MDF + LDF) em MB
+    db_mdf_size_mb = Column(BigInteger, nullable=True)     # Tamanho do arquivo de dados (MDF) em MB
+    db_ldf_size_mb = Column(BigInteger, nullable=True)     # Tamanho do arquivo de log (LDF) em MB
+    disco_total_gb = Column(Integer, nullable=True)        # Espaço total em disco (GB)
+    disco_livre_gb = Column(Integer, nullable=True)        # Espaço livre em disco (GB)
+    backup_dias_atras = Column(Integer, nullable=True)     # Dias desde o último backup
 
     # ── Sistema Operacional ───────────────────────────────────────
     os_version       = Column(String(255), nullable=True)

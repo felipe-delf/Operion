@@ -15,8 +15,11 @@ class UserModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(100), unique=True, index=True, nullable=False)
     senha_hash = Column(String(255), nullable=False)
-    role = Column(String(50), default="Suporte") # 'Admin' ou 'Suporte'
+    role = Column(String(50), default="Suporte") # 'Admin' ou 'Suporte' (legacy/compatibilidade)
+    grupo_id = Column(Integer, ForeignKey("user_grupos.id"), nullable=True)
     exige_troca_senha = Column(Boolean, default=True)
     ativo = Column(Boolean, default=True)  # False = usuário bloqueado, não consegue logar
 
+    grupo = relationship("UserGroupModel")
     scripts_permitidos = relationship("ScriptModel", secondary=user_script_access)
+

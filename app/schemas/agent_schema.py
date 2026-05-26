@@ -1,9 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
 
 class PcStatusResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     loja_id: int
     tipo: str
@@ -16,9 +18,14 @@ class PcStatusResponse(BaseModel):
     mac_address: Optional[str] = None
 
     # Hardware
-    cpu_nucleos:  Optional[int] = None
-    ram_total_mb: Optional[int] = None
-    db_size_mb:   Optional[int] = None
+    cpu_nucleos:    Optional[int] = None
+    ram_total_mb:   Optional[int] = None
+    db_size_mb:     Optional[int] = None
+    db_mdf_size_mb: Optional[int] = None
+    db_ldf_size_mb: Optional[int] = None
+    disco_total_gb: Optional[int] = None
+    disco_livre_gb: Optional[int] = None
+    backup_dias_atras: Optional[int] = None
 
     # OS
     os_version:      Optional[str] = None
@@ -34,9 +41,6 @@ class PcStatusResponse(BaseModel):
 
     status: str
     ultima_atualizacao: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 class ScanRequest(BaseModel):

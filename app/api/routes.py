@@ -21,13 +21,14 @@ router = APIRouter()
 
 @router.post("/scripts/", response_model=ScriptResponse, tags=["Admin - Scripts"])
 def criar_script(script: ScriptCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem criar scripts")
+    if "GERENCIAR_COFRE" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para criar scripts no cofre.")
     db_script = db.query(ScriptModel).filter(ScriptModel.nome == script.nome).first()
     if db_script:
         raise HTTPException(status_code=400, detail="Script com este nome já existe.")
 
     novo_script = ScriptModel(**script.model_dump())
+    novo_script.criado_por = current_user.get("email", "desconhecido")
     db.add(novo_script)
     db.commit()
     db.refresh(novo_script)
@@ -38,7 +39,7 @@ def criar_script(script: ScriptCreate, db: Session = Depends(get_db), current_us
 def listar_scripts(apenas_publicados: bool = False, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     user = db.query(UserModel).filter(UserModel.id == current_user["id"]).first()
 
-    if current_user["role"] == "Admin":
+    if "GERENCIAR_COFRE" in current_user.get("permissions", ""):
         query = db.query(ScriptModel)
         if apenas_publicados:
             query = query.filter(ScriptModel.publicado == True)
@@ -63,8 +64,8 @@ def buscar_script(script_id: int, db: Session = Depends(get_db)):
 
 @router.put("/scripts/{script_id}", response_model=ScriptResponse, tags=["Admin - Scripts"])
 def atualizar_script(script_id: int, req: ScriptCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem editar scripts")
+    if "GERENCIAR_COFRE" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para editar scripts.")
 
     script = db.query(ScriptModel).filter(ScriptModel.id == script_id).first()
     if not script:
@@ -77,6 +78,9 @@ def atualizar_script(script_id: int, req: ScriptCreate, db: Session = Depends(ge
     script.parametros_exigidos = req.parametros_exigidos
     script.publicado           = req.publicado
     script.alvo_fixo           = req.alvo_fixo  # Salva o alvo travado
+    script.modificado_por      = current_user.get("email", "desconhecido")
+    if not script.criado_por:
+        script.criado_por      = current_user.get("email", "desconhecido")
 
     db.commit()
     db.refresh(script)
@@ -85,8 +89,8 @@ def atualizar_script(script_id: int, req: ScriptCreate, db: Session = Depends(ge
 
 @router.delete("/scripts/{script_id}", tags=["Admin - Scripts"])
 def deletar_script(script_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem deletar scripts")
+    if "GERENCIAR_COFRE" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para deletar scripts.")
 
     script = db.query(ScriptModel).filter(ScriptModel.id == script_id).first()
     if not script:
@@ -111,7 +115,7 @@ def listar_lojas(db: Session = Depends(get_db), current_user: dict = Depends(get
         SELECT L.LOJA, L.NOME_RESUMIDO, P.INSCRICAO_FEDERAL
         FROM LOJAS L WITH(NOLOCK)
         LEFT JOIN PESSOAS_JURIDICAS P WITH(NOLOCK) ON P.ENTIDADE = L.LOJA
-        WHERE L.ATIVA = 'S'
+        WHERE L.ATIVA = 'S' AND L.LOJA NOT IN (990, 900)
         ORDER BY L.LOJA
         """
         cursor.execute(query)
@@ -155,7 +159,10 @@ def executar_script(
         raise HTTPException(status_code=404, detail="Script não encontrado no Cofre")
 
     # Validação de Segurança
-    if current_user["role"] != "Admin":
+    if "EXECUTAR_SCRIPT" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para executar scripts.")
+
+    if "GERENCIAR_COFRE" not in current_user.get("permissions", ""):
         user = db.query(UserModel).filter(UserModel.id == current_user["id"]).first()
         scripts_permitidos = [s.id for s in user.scripts_permitidos]
         if script_id not in scripts_permitidos:
@@ -209,8 +216,8 @@ def executar_broadcast(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem disparar broadcast")
+    if "EXECUTAR_BROADCAST" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para disparar broadcast.")
     
     script_id = req.get("script_id")
     script = db.query(ScriptModel).filter(ScriptModel.id == script_id).first()
@@ -326,12 +333,12 @@ def listar_logs_execucao(
 ):
     """
     Histórico completo de quem executou qual script, quando e em qual loja.
-    ⚠️ Acesso restrito a Administradores.
+    ⚠️ Acesso restrito.
     """
-    if current_user["role"] != "Admin":
+    if "VER_LOGS" not in current_user.get("permissions", ""):
         raise HTTPException(
             status_code=403,
-            detail="Acesso negado. Apenas administradores podem visualizar os logs de execução."
+            detail="Acesso negado. Você não tem permissão para visualizar os logs de execução."
         )
 
     logs = (

@@ -1,81 +1,132 @@
-# PromoSync
+# RetailDesk
 
-PromoSync é uma plataforma de parametrização e auditoria para Servidores e PDVs de lojas. Ele permite executar scripts remotos automatizados em bancos de dados SQL Server locais de forma rápida, além de contar com um painel (dashboard) com regras avançadas de validação e métricas gerais.
+[![CI — Testes Automatizados](https://github.com/SEU_USUARIO/RetailDesk/actions/workflows/ci.yml/badge.svg)](https://github.com/SEU_USUARIO/RetailDesk/actions/workflows/ci.yml)
 
-## Tecnologias
+**RetailDesk** é uma plataforma open-source de parametrização, auditoria e monitoramento para redes de varejo. Permite executar scripts SQL remotos em Servidores e PDVs das lojas, com controle granular de acesso (RBAC), dashboard em tempo real e auditoria de execuções.
 
-- **Backend:** FastAPI, SQLAlchemy, PyODBC (SQL Server / MS ODBC 18).
-- **Frontend:** React, Vite.
-- **Banco Local:** SQLite (para manter os usuários, regras de auditoria e configurações).
+## ✨ Funcionalidades
 
-## Requisitos
+- 🔒 **Autenticação JWT** com controle de acesso por grupos (RBAC dinâmico)
+- 🗃️ **Cofre SQL** — crie, versione e publique scripts para as lojas
+- 🖥️ **Monitor de Lojas** — veja CPU, RAM, Disco e versão SQL em tempo real via ODBC
+- 📋 **Auditoria** — defina regras SQL para validar a saúde dos PDVs
+- 📡 **Broadcast** — dispare scripts em múltiplas lojas simultaneamente
+- 👥 **Gerenciamento de Equipe** — grupos com permissões customizadas (N1, N2, Desenvolvimento, etc.)
+- 📊 **Logs de Execução** — histórico completo de todos os disparos
 
-- Docker e Docker Compose instalados na máquina servidora.
-- Acesso à rede das Lojas (Porta 1433 liberada nos PDVs/Servidores para conexão com o banco).
+## 🛠️ Tecnologias
 
-## Configuração
+| Camada | Stack |
+|---|---|
+| Backend | FastAPI, SQLAlchemy, PyODBC (SQL Server), PyJWT |
+| Frontend | React 19, Vite, React Router |
+| Banco local | SQLite (usuários, grupos, regras, scripts) |
+| Infra | Docker, Docker Compose, GitHub Actions (CI) |
+| Testes | Pytest, TestClient (FastAPI) |
 
-Antes de rodar a aplicação, crie um arquivo `.env` na raiz do projeto (onde o arquivo `main.py` está localizado).
+## 🚀 Como Rodar
 
-Exemplo de estrutura do `.env`:
+### Pré-requisitos
+
+- Docker e Docker Compose **ou** Python 3.11+ e Node.js 20+
+- Acesso de rede à porta **1433** dos Servidores/PDVs das lojas (SQL Server)
+- Microsoft ODBC Driver 18 for SQL Server (instalado automaticamente no Docker)
+
+### 1. Configurar as variáveis de ambiente
+
+Copie o arquivo de exemplo e edite com suas credenciais:
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env`:
 
 ```env
-# 1. JWT & Segurança da API
-SECRET_KEY=SUA_SECRET_KEY
+# JWT & Segurança
+SECRET_KEY=sua_secret_key_aleatoria_aqui
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=600
 
-# 2. Banco de Dados Local do Backend (FastAPI)
+# Banco de Dados Local
 DATABASE_URL=sqlite:///./parametrizacao.db
 
-# 3. Credenciais da Retaguarda
-RETAGUARDA_IP=SERVIDOR
-RETAGUARDA_DB=RETAGUARDA_PRODUCAO
-RETAGUARDA_USER=usuario_aqui
-RETAGUARDA_PWD=senha_aqui
+# Retaguarda (banco central da sua rede)
+RETAGUARDA_IP=IP_DO_SERVIDOR_RETAGUARDA
+RETAGUARDA_DB=NOME_DO_BANCO_RETAGUARDA
+RETAGUARDA_USER=usuario_sql
+RETAGUARDA_PWD=senha_sql
 
-# 4. Credenciais das Lojas (Servidores e PDVs - ODBC)
-LOJAS_UID=USUARIO
-LOJAS_PWD=SENHA
+# Lojas (PDVs e Servidores)
+LOJAS_UID=SA
+LOJAS_PWD=sua_senha_lojas
 ```
 
-> **Atenção:** Se não tiver o arquivo `parametrizacao.db`, o FastAPI vai criá-lo automaticamente ao rodar, porém vazio (sem usuário). Você precisará criá-lo via script ou via API.
-
-## Como Rodar via Docker (Recomendado para Produção)
-
-A aplicação conta com um arquivo `docker-compose.yml` e dois `Dockerfile` (um para o backend em Python, e outro para o frontend em Nginx). O Dockerfile do Backend já cuida da instalação do driver da Microsoft (`msodbcsql18`), que é necessário para a conexão ODBC.
-
-Na raiz do projeto, execute:
+### 2. Rodar com Docker (Recomendado para Produção)
 
 ```bash
 docker-compose up -d --build
 ```
 
-- **Frontend:** Acessível em `http://localhost:80`
-- **Backend (API):** Acessível em `http://localhost:8080/docs`
+| Serviço | URL |
+|---|---|
+| Frontend | http://localhost:80 |
+| Backend API | http://localhost:8080/docs |
 
-## Como Rodar Localmente (Desenvolvimento)
+### 3. Rodar Localmente (Desenvolvimento)
 
-Se preferir não usar o Docker para testes locais, você precisará ter o MS ODBC Driver 18 for SQL Server ou a versão 11 instalada no seu Windows/Linux.
-
-### Backend
-
+**Backend:**
 ```bash
-# Instale as dependências
 pip install -r requirements.txt
-
-# Inicie o servidor
 uvicorn app.main:app --reload --port 8080
 ```
 
-### Frontend
-
-Em um terminal separado:
-
+**Frontend** (em outro terminal):
 ```bash
 cd frontend
 npm install
 npm run dev
+# → http://localhost:5173
 ```
 
-A interface web estará disponível em `http://localhost:5173`.
+## 🔐 Primeiro Acesso
+
+Ao iniciar pela primeira vez, o sistema cria automaticamente um usuário administrador padrão:
+
+- **E-mail:** `admin@empresa.com`
+- **Senha:** `Admin@123`
+
+> ⚠️ **Troque imediatamente** a senha após o primeiro login!
+
+## 🧪 Testes Automatizados
+
+```bash
+pip install -r requirements-test.txt
+python -m pytest tests/ -v
+```
+
+O CI/CD via GitHub Actions executa os testes a cada `push` ou `pull_request` para as branches `main`, `master` ou `develop`.
+
+## 📁 Estrutura do Projeto
+
+```
+├── app/
+│   ├── api/          # Rotas FastAPI (auth, users, scripts, audit, agent)
+│   ├── core/         # Segurança JWT, banco de dados, configurações
+│   ├── models/       # Models SQLAlchemy
+│   ├── schemas/      # Schemas Pydantic V2
+│   └── services/     # Workers de execução ODBC e scan WMI
+├── frontend/
+│   └── src/
+│       └── components/  # Componentes React
+├── tests/            # Suite de testes Pytest (47 testes)
+├── .github/
+│   └── workflows/    # Pipeline CI/CD GitHub Actions
+├── Dockerfile
+├── docker-compose.yml
+└── .env.example
+```
+
+## 📄 Licença
+
+MIT License — veja [LICENSE](LICENSE) para detalhes.

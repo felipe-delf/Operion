@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+
 
 class ScriptBase(BaseModel):
     nome: str
@@ -12,33 +13,37 @@ class ScriptBase(BaseModel):
     # Trava o alvo de execução (ex: "PDV_ESPECIFICO"). None = usuário escolhe.
     alvo_fixo: Optional[str] = None
 
+
 class ScriptCreate(ScriptBase):
     pass
 
-class ScriptResponse(ScriptBase):
-    id: int
 
-    class Config:
-        from_attributes = True
+class ScriptResponse(ScriptBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    criado_por: Optional[str] = None
+    modificado_por: Optional[str] = None
+
 
 class ScriptExecutionRequest(BaseModel):
     parametros: Dict[str, Any]
 
+
 # ── Schemas de Log de Execução ────────────────────────────────────────────────
 
 class ExecutionLogResponse(BaseModel):
-    id: int
-    script_id: Optional[int]
-    script_nome: Optional[str]
-    usuario_id: Optional[int]
-    usuario_email: Optional[str]
-    usuario_role: Optional[str]
-    loja_id: Optional[str]
-    alvo: Optional[str]
-    parametros: Optional[Dict[str, Any]]
-    job_id: Optional[str]
-    status_final: Optional[str]
-    executado_em: Optional[datetime]
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    script_id: Optional[int] = None
+    script_nome: Optional[str] = None
+    usuario_id: Optional[int] = None
+    usuario_email: Optional[str] = None
+    usuario_role: Optional[str] = None
+    loja_id: Optional[str] = None
+    alvo: Optional[str] = None
+    parametros: Optional[Dict[str, Any]] = None
+    job_id: Optional[str] = None
+    status_final: Optional[str] = None
+    executado_em: Optional[datetime] = None

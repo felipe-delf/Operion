@@ -18,10 +18,15 @@ function formatRam(mb) {
   return `${mb} MB`;
 }
 
-function formatDbSize(mb) {
+function formatDbSize(mb, mdfMb, ldfMb) {
   if (mb == null) return null;
-  if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
-  return `${mb} MB`;
+  const totalStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb} MB`;
+  if (mdfMb != null && ldfMb != null) {
+    const mdfStr = mdfMb >= 1024 ? `${(mdfMb / 1024).toFixed(2)} GB` : `${mdfMb} MB`;
+    const ldfStr = ldfMb >= 1024 ? `${(ldfMb / 1024).toFixed(2)} GB` : `${ldfMb} MB`;
+    return `${totalStr} (MDF: ${mdfStr} | LDF: ${ldfStr})`;
+  }
+  return totalStr;
 }
 
 function formatLastSeen(dateStr) {
@@ -61,7 +66,7 @@ function InfoChip({ icon, label, value, accent }) {
         <span style={{ color: accent || '#64748b', display: 'flex' }}>{icon}</span>
         {label}
       </div>
-      <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>
         {value}
       </div>
     </div>
@@ -120,6 +125,17 @@ function PcCard({ pc }) {
   const online = pc.status === 'online';
   const border = online ? '#10b981' : pc.status === 'sem_wmi' ? '#f59e0b' : '#1e293b';
 
+  const diskTotal = pc.disco_total_gb;
+  const diskFree = pc.disco_livre_gb;
+  const dias = pc.backup_dias_atras;
+  const isExpress = pc.sql_edition && pc.sql_edition.toLowerCase().includes('express');
+  const dbMdfMB = pc.db_mdf_size_mb ?? pc.db_size_mb ?? 0;
+  const dbLdfMB = pc.db_ldf_size_mb ?? 0;
+  const dbMdfGB = dbMdfMB / 1024;
+  const dbLdfGB = dbLdfMB / 1024;
+  const isMdfLimitNear = isExpress && dbMdfGB > 8.5; // MDF perto do limite de 10GB
+  const isLdfLarge = isExpress && dbLdfGB > 10.0; // LDF muito acumulado (> 10GB)
+
   return (
     <div style={{
       background: 'rgba(255,255,255,0.035)', borderRadius: 14,
@@ -162,7 +178,9 @@ function PcCard({ pc }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
             <InfoChip icon={<Cpu size={11} />}         label="CPU"    value={pc.cpu_nucleos ? `${pc.cpu_nucleos} núcleos` : null}    accent="rgba(251,191,36,0.4)" />
             <InfoChip icon={<MemoryStick size={11} />}  label="RAM"    value={formatRam(pc.ram_total_mb)}                              accent="rgba(52,211,153,0.4)" />
-            <InfoChip icon={<Database size={11} />}     label="Banco"  value={formatDbSize(pc.db_size_mb)}                             accent="rgba(244,114,182,0.4)" />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <InfoChip icon={<Database size={11} />}     label="Banco de Dados"  value={formatDbSize(pc.db_size_mb, pc.db_mdf_size_mb, pc.db_ldf_size_mb)}                             accent="rgba(244,114,182,0.4)" />
+            </div>
             <InfoChip icon={<Network size={11} />}      label="IP"     value={pc.ip_local || pc.ip}                                    accent="rgba(96,165,250,0.4)" />
             <InfoChip icon={<Clock size={11} />}        label="Uptime" value={formatUptime(pc.uptime_segundos)}                        accent="rgba(167,139,250,0.4)" />
             {pc.os_version && (
@@ -171,6 +189,99 @@ function PcCard({ pc }) {
               </div>
             )}
           </div>
+
+          {/* Alerta de Express 10GB / Logs LDF */}
+          {(isMdfLimitNear || isLdfLarge) && (
+            isMdfLimitNear ? (
+              <div style={{
+                background: dbMdfGB >= 10.0
+                  ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.25) 100%)'
+                  : 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.2) 100%)',
+                border: dbMdfGB >= 10.0 ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(245,158,11,0.3)',
+                borderRadius: 8, padding: '8px 10px', marginBottom: 8,
+                fontSize: 10,
+                color: dbMdfGB >= 10.0 ? '#fca5a5' : '#fde047',
+                fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5
+              }}
+                title={dbMdfGB >= 10.0 
+                  ? 'SQL Express excedeu o limite de 10GB de DADOS (MDF). Risco de travamento de escrita!'
+                  : 'SQL Express próximo do limite de 10GB de DADOS (MDF). Faça uma limpeza para evitar travamentos.'}
+              >
+                <AlertTriangle size={12} color={dbMdfGB >= 10.0 ? '#f87171' : '#fbbf24'} />
+                {dbMdfGB >= 10.0 ? 'EXPRESS EXCEDIDO:' : 'EXPRESS PRÓXIMO:'} {dbMdfGB.toFixed(2)} GB / 10 GB (Dados)
+              </div>
+            ) : (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.2) 100%)',
+                border: '1px solid rgba(245,158,11,0.3)',
+                borderRadius: 8, padding: '8px 10px', marginBottom: 8,
+                fontSize: 10,
+                color: '#fde047',
+                fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5
+              }}
+                title="O arquivo de log (LDF) está muito grande. Faça um encolhimento (Shrink) para liberar espaço no disco."
+              >
+                <AlertTriangle size={12} color="#fbbf24" />
+                AVISO LOGS (LDF): {dbLdfGB.toFixed(2)} GB acumulados
+              </div>
+            )
+          )}
+
+          {/* Espaço em Disco */}
+          {diskFree != null && (
+            <div style={{
+              background: 'rgba(255,255,255,0.03)', borderRadius: 8,
+              padding: '6px 10px', border: `1px solid rgba(255,255,255,0.06)`,
+              marginBottom: 6, display: 'flex', flexDirection: 'column', gap: 3
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 9 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <HardDrive size={10} color={diskFree < 15 ? '#f59e0b' : '#34d399'} /> Disco
+                </div>
+                {diskTotal != null ? (
+                  <span style={{ fontWeight: 600, color: (100 - Math.round(((diskTotal - diskFree) / diskTotal) * 100)) < 12 ? '#fca5a5' : '#94a3b8' }}>
+                    {diskFree} GB livres ({100 - Math.round(((diskTotal - diskFree) / diskTotal) * 100)}%)
+                  </span>
+                ) : (
+                  <span style={{ fontWeight: 600, color: '#38bdf8' }}>{diskFree} GB livres</span>
+                )}
+              </div>
+              {diskTotal != null && (
+                <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.round(((diskTotal - diskFree) / diskTotal) * 100)}%`,
+                    height: '100%',
+                    background: (100 - Math.round(((diskTotal - diskFree) / diskTotal) * 100)) < 10 ? '#ef4444' : (100 - Math.round(((diskTotal - diskFree) / diskTotal) * 100)) < 15 ? '#f59e0b' : '#34d399',
+                    borderRadius: 2
+                  }} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Backup Age */}
+          {dias != null ? (
+            <div style={{
+              padding: '5px 8px', borderRadius: 8, fontSize: 10, fontWeight: 600, marginBottom: 8,
+              background: dias <= 1 ? 'rgba(52,211,153,0.08)' : dias <= 3 ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${dias <= 1 ? 'rgba(52,211,153,0.2)' : dias <= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              color: dias <= 1 ? '#34d399' : dias <= 3 ? '#fbbf24' : '#f87171',
+              display: 'flex', alignItems: 'center', gap: 4
+            }}>
+              {dias <= 1 ? `✅ Backup em dia (${dias === 0 ? 'hoje' : 'ontem'})` : dias <= 3 ? `⚠️ Backup pendente (${dias} dias)` : `🚨 Backup CRÍTICO: ${dias} dias!`}
+            </div>
+          ) : (
+            isServ && (
+              <div style={{
+                padding: '5px 8px', borderRadius: 8, fontSize: 10, fontWeight: 700, marginBottom: 8,
+                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                color: '#f87171', display: 'flex', alignItems: 'center', gap: 4
+              }}>
+                🚨 ALERTA CRÍTICO: Sem histórico de backup!
+              </div>
+            )
+          )}
+
           <SqlBadge version={pc.sql_version} edition={pc.sql_edition} level={pc.sql_level} />
         </>
       )}

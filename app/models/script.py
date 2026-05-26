@@ -15,3 +15,5 @@ class ScriptModel(Base):
     # O usuário não consegue alterar o destino na hora de rodar o script.
     # Valores: SERVIDOR | TODOS_PDVS | PDV_ESPECIFICO | AMBOS | SERVIDOR_PDV | None
     alvo_fixo = Column(String(50), nullable=True)
+    criado_por = Column(String(100), nullable=True)
+    modificado_por = Column(String(100), nullable=True)

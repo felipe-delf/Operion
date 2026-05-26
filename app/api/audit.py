@@ -24,8 +24,8 @@ def listar_grupos(db: Session = Depends(get_db), current_user: dict = Depends(ge
 
 @router.post("/auditoria/grupos/", response_model=AuditGroupResponse, tags=["Admin - Auditoria"])
 def criar_grupo(req: AuditGroupCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas admins podem criar grupos.")
+    if "GERENCIAR_AUDITORIA" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para gerenciar a auditoria.")
 
     existente = db.query(AuditGroupModel).filter(AuditGroupModel.nome == req.nome).first()
     if existente:
@@ -40,8 +40,8 @@ def criar_grupo(req: AuditGroupCreate, db: Session = Depends(get_db), current_us
 
 @router.put("/auditoria/grupos/{grupo_id}", response_model=AuditGroupResponse, tags=["Admin - Auditoria"])
 def editar_grupo(grupo_id: int, req: AuditGroupUpdate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas admins podem editar grupos.")
+    if "GERENCIAR_AUDITORIA" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para gerenciar a auditoria.")
 
     grupo = db.query(AuditGroupModel).filter(AuditGroupModel.id == grupo_id).first()
     if not grupo:
@@ -56,8 +56,8 @@ def editar_grupo(grupo_id: int, req: AuditGroupUpdate, db: Session = Depends(get
 
 @router.delete("/auditoria/grupos/{grupo_id}", tags=["Admin - Auditoria"])
 def deletar_grupo(grupo_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Acesso Negado.")
+    if "GERENCIAR_AUDITORIA" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para gerenciar a auditoria.")
 
     grupo = db.query(AuditGroupModel).filter(AuditGroupModel.id == grupo_id).first()
     if not grupo:
@@ -88,8 +88,8 @@ def _enrich_regra(regra: AuditRuleModel) -> dict:
 
 @router.post("/auditoria/", tags=["Admin - Auditoria"])
 def criar_regra(req: AuditRuleCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas admins podem criar regras de auditoria.")
+    if "GERENCIAR_AUDITORIA" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para gerenciar regras de auditoria.")
 
     nova_regra = AuditRuleModel(**req.model_dump())
     db.add(nova_regra)
@@ -114,8 +114,8 @@ def buscar_regra(regra_id: int, db: Session = Depends(get_db), current_user: dic
 
 @router.put("/auditoria/{regra_id}", tags=["Admin - Auditoria"])
 def editar_regra(regra_id: int, req: AuditRuleUpdate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Apenas admins podem editar regras de auditoria.")
+    if "GERENCIAR_AUDITORIA" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para gerenciar regras de auditoria.")
 
     regra = db.query(AuditRuleModel).filter(AuditRuleModel.id == regra_id).first()
     if not regra:
@@ -135,8 +135,8 @@ def editar_regra(regra_id: int, req: AuditRuleUpdate, db: Session = Depends(get_
 
 @router.delete("/auditoria/{regra_id}", tags=["Admin - Auditoria"])
 def deletar_regra(regra_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "Admin":
-        raise HTTPException(status_code=403, detail="Acesso Negado")
+    if "GERENCIAR_AUDITORIA" not in current_user.get("permissions", ""):
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para gerenciar regras de auditoria.")
 
     regra = db.query(AuditRuleModel).filter(AuditRuleModel.id == regra_id).first()
     if not regra:

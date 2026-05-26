@@ -23,12 +23,31 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             "message": "Ação Necessária: Redefina sua senha."
         }
 
-    token = create_access_token({"sub": user.email, "role": user.role, "id": user.id})
+    # Carrega permissões dinâmicas do grupo
+    permissoes = ""
+    grupo_nome = ""
+    if user.grupo:
+        permissoes = user.grupo.permissoes
+        grupo_nome = user.grupo.nome
+    elif user.role == "Admin":
+        permissoes = "VER_DASHBOARD,EXECUTAR_SCRIPT,GERENCIAR_COFRE,GERENCIAR_AUDITORIA,VER_LOGS,EXECUTAR_BROADCAST,GERENCIAR_EQUIPE"
+        grupo_nome = "Administradores"
+    else:
+        permissoes = "VER_DASHBOARD"
+        grupo_nome = "Suporte N1"
+
+    token = create_access_token({
+        "sub": user.email,
+        "role": grupo_nome,
+        "id": user.id,
+        "permissions": permissoes
+    })
     return {
         "access_token": token,
         "token_type": "bearer",
-        "role": user.role,
-        "email": user.email
+        "role": grupo_nome,
+        "email": user.email,
+        "permissions": permissoes
     }
 
 @router.post("/mudar_senha/{user_id}", tags=["Autenticação"])
@@ -41,11 +60,31 @@ def mudar_senha(user_id: int, req: ChangePasswordRequest, db: Session = Depends(
     user.exige_troca_senha = False
     db.commit()
 
-    token = create_access_token({"sub": user.email, "role": user.role, "id": user.id})
+    # Carrega permissões dinâmicas do grupo
+    permissoes = ""
+    grupo_nome = ""
+    if user.grupo:
+        permissoes = user.grupo.permissoes
+        grupo_nome = user.grupo.nome
+    elif user.role == "Admin":
+        permissoes = "VER_DASHBOARD,EXECUTAR_SCRIPT,GERENCIAR_COFRE,GERENCIAR_AUDITORIA,VER_LOGS,EXECUTAR_BROADCAST,GERENCIAR_EQUIPE"
+        grupo_nome = "Administradores"
+    else:
+        permissoes = "VER_DASHBOARD"
+        grupo_nome = "Suporte N1"
+
+    token = create_access_token({
+        "sub": user.email,
+        "role": grupo_nome,
+        "id": user.id,
+        "permissions": permissoes
+    })
     return {
         "access_token": token,
         "token_type": "bearer",
-        "role": user.role,
+        "role": grupo_nome,
         "email": user.email,
+        "permissions": permissoes,
         "message": "Senha atualizada com sucesso!"
     }
+

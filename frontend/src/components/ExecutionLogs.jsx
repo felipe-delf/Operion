@@ -37,13 +37,16 @@ export default function ExecutionLogs() {
   const role  = localStorage.getItem('role');
 
   useEffect(() => {
-    if (role !== 'Admin') {
-      alert('Acesso negado. Apenas administradores podem ver os logs.');
+    const activeRole = localStorage.getItem('role');
+    const permissions = localStorage.getItem('permissions') || '';
+
+    if (activeRole !== 'TI' && activeRole !== 'Administradores' && activeRole !== 'Admin' && !permissions.includes('VER_LOGS')) {
+      alert('Acesso negado: Você não tem permissão para visualizar os logs.');
       navigate('/dashboard');
       return;
     }
     fetchLogs();
-  }, []);
+  }, [navigate]);
 
   const fetchLogs = async () => {
     setLoading(true);

@@ -148,6 +148,104 @@ def _query_ip_local(cursor) -> str | None:
     return None
 
 
+def _query_disk_space(cursor) -> tuple[int | None, int | None]:
+    """
+    Retorna (total_gb, livre_gb) do disco onde o banco de dados está localizado.
+    Usa sys.dm_os_volume_stats como principal e xp_fixeddrives como fallback.
+    """
+    # 1. Estratégia Principal (SQL Server 2008 R2 SP1+)
+    try:
+        query = """
+        SELECT TOP 1
+            CAST(total_bytes / 1073741824 AS INT) AS total_gb,
+            CAST(available_bytes / 1073741824 AS INT) AS livre_gb
+        FROM sys.master_files AS f
+        CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)
+        WHERE f.database_id = DB_ID()
+        """
+        cursor.execute(query)
+        row = cursor.fetchone()
+        if row and row[0] is not None and row[1] is not None:
+            return int(row[0]), int(row[1])
+    except Exception:
+        pass
+
+    # Fallback 2: sys.dm_os_volume_stats sem filtro de DB_ID
+    try:
+        query = """
+        SELECT TOP 1
+            CAST(total_bytes / 1073741824 AS INT) AS total_gb,
+            CAST(available_bytes / 1073741824 AS INT) AS livre_gb
+        FROM sys.master_files AS f
+        CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)
+        """
+        cursor.execute(query)
+        row = cursor.fetchone()
+        if row and row[0] is not None and row[1] is not None:
+            return int(row[0]), int(row[1])
+    except Exception:
+        pass
+
+    # 2. Fallback (SQL Server 2008 / 2005 sem sys.dm_os_volume_stats)
+    try:
+        cursor.execute("EXEC xp_fixeddrives")
+        rows = cursor.fetchall()
+        if rows:
+            # Tenta encontrar o driver C, senão pega o primeiro
+            drive_c = None
+            for r in rows:
+                if str(r[0]).upper() == "C":
+                    drive_c = r
+                    break
+            target_drive = drive_c if drive_c else rows[0]
+            livre_mb = int(target_drive[1])
+            livre_gb = max(1, livre_mb // 1024)
+            # Para total_gb, como xp_fixeddrives não traz, retornamos None
+            return None, livre_gb
+    except Exception:
+        pass
+
+    return None, None
+
+
+def _query_backup_age(cursor) -> int | None:
+    """
+    Retorna a quantidade de dias desde o último backup completo/diferencial do banco de dados atual.
+    """
+    try:
+        # Filtra pelo banco ativo atual (DB_NAME()) e tipos de backup (D = Completo, I = Diferencial)
+        query = """
+        SELECT TOP 1 DATEDIFF(day, backup_finish_date, GETDATE()) AS dias_atras
+        FROM msdb.dbo.backupset
+        WHERE database_name = DB_NAME()
+          AND type IN ('D', 'I')
+        ORDER BY backup_finish_date DESC
+        """
+        cursor.execute(query)
+        row = cursor.fetchone()
+        if row and row[0] is not None:
+            return int(row[0])
+    except Exception:
+        pass
+
+    # Fallback genérico sem filtrar pelo tipo de backup
+    try:
+        query = """
+        SELECT TOP 1 DATEDIFF(day, backup_finish_date, GETDATE()) AS dias_atras
+        FROM msdb.dbo.backupset
+        WHERE database_name = DB_NAME()
+        ORDER BY backup_finish_date DESC
+        """
+        cursor.execute(query)
+        row = cursor.fetchone()
+        if row and row[0] is not None:
+            return int(row[0])
+    except Exception:
+        pass
+
+    return None
+
+
 def _parse_os_version(full_ver: str) -> str:
     """Extrai a versão do Windows da string @@VERSION."""
     if not full_ver:
@@ -219,6 +317,11 @@ def scan_pc(ip: str, tipo: str, caixa_id: int | None = None) -> dict:
         "cpu_nucleos":  None,
         "ram_total_mb": None,
         "db_size_mb":   None,
+        "db_mdf_size_mb": None,
+        "db_ldf_size_mb": None,
+        "disco_total_gb": None,
+        "disco_livre_gb": None,
+        "backup_dias_atras": None,
         "os_version":     None,
         "uptime_segundos": None,
         "sql_version": None,
@@ -273,21 +376,39 @@ def scan_pc(ip: str, tipo: str, caixa_id: int | None = None) -> dict:
         # ── 3. IP local via sessão SQL ativa ───────────────────────────────
         ip_local = _query_ip_local(cursor)
 
+        # ── 3.1. Espaço em Disco e Backup ─────────────────────────────────
+        disco_total_gb, disco_livre_gb = _query_disk_space(cursor)
+        backup_dias_atras = _query_backup_age(cursor)
+
         # ── 4. Tamanho do Banco de Dados ───────────────────────────────────
         db_size_mb = None
+        db_mdf_size_mb = None
+        db_ldf_size_mb = None
         try:
-            cursor.execute("SELECT SUM(CAST(size AS BIGINT)) * 8 / 1024")
+            # Query robusta buscando dados (type=0) e logs (type=1) de forma isolada
+            cursor.execute("""
+                SELECT 
+                    SUM(CASE WHEN type = 0 THEN CAST(size AS BIGINT) ELSE 0 END) * 8 / 1024 AS mdf_mb,
+                    SUM(CASE WHEN type = 1 THEN CAST(size AS BIGINT) ELSE 0 END) * 8 / 1024 AS ldf_mb,
+                    SUM(CAST(size AS BIGINT)) * 8 / 1024 AS total_mb
+                FROM sys.database_files
+            """)
             db_row = cursor.fetchone()
-            if db_row and db_row[0] is not None:
-                db_size_mb = int(db_row[0])
+            if db_row:
+                db_mdf_size_mb = int(db_row[0]) if db_row[0] is not None else 0
+                db_ldf_size_mb = int(db_row[1]) if db_row[1] is not None else 0
+                db_size_mb = int(db_row[2]) if db_row[2] is not None else 0
         except Exception as e_db:
+            log.warning(f"[{ip}] Erro ao obter tamanhos MDF/LDF via sys.database_files: {e_db}")
             try:
                 cursor.execute("SELECT SUM(CAST(size AS BIGINT)) * 8 / 1024 FROM sys.database_files")
                 db_row = cursor.fetchone()
                 if db_row and db_row[0] is not None:
                     db_size_mb = int(db_row[0])
+                    db_mdf_size_mb = db_size_mb
+                    db_ldf_size_mb = 0
             except Exception as e_db_fallback:
-                log.warning(f"[{ip}] Erro ao obter tamanho do banco: {e_db_fallback}")
+                log.warning(f"[{ip}] Fallback de tamanho do banco falhou: {e_db_fallback}")
 
         conn.close()
 
@@ -297,6 +418,11 @@ def scan_pc(ip: str, tipo: str, caixa_id: int | None = None) -> dict:
             "cpu_nucleos":  cpu_nucleos,
             "ram_total_mb": ram_mb,
             "db_size_mb":   db_size_mb,
+            "db_mdf_size_mb": db_mdf_size_mb,
+            "db_ldf_size_mb": db_ldf_size_mb,
+            "disco_total_gb": disco_total_gb,
+            "disco_livre_gb": disco_livre_gb,
+            "backup_dias_atras": backup_dias_atras,
             "os_version":     os_version,
             "uptime_segundos": uptime_seg,
             "sql_version": sql_version,
