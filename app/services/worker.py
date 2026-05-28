@@ -315,11 +315,19 @@ def run_broadcast_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv
     """
     Roda um script em TODAS as lojas fornecidas, uma por uma.
     Cada loja gera uma etapa no ACTIVE_JOBS com sub-etapas de resultado.
+    Ao final, monta um 'relatorio' detalhado com lojas offline, lojas com erro,
+    PDVs individuais com falha e um resumo consolidado.
 
     lojas: lista de dicts [{"id": int, "nome": str}, ...]
     """
     print(f"[BROADCAST] [BROADCAST INICIADO] Job: {job_id} | Script '{script_nome}' | {len(lojas)} lojas | Alvo: {alvo}")
-    ACTIVE_JOBS[job_id] = {"status": "rodando", "etapas": [], "broadcast": True, "total_lojas": len(lojas)}
+    ACTIVE_JOBS[job_id] = {
+        "status": "rodando",
+        "etapas": [],
+        "broadcast": True,
+        "total_lojas": len(lojas),
+        "relatorio": None
+    }
 
     def update_etapa(nome, status, detalhe=None):
         for e in ACTIVE_JOBS[job_id]["etapas"]:
@@ -336,6 +344,12 @@ def run_broadcast_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv
     worker = OdbcWorker()
     erros = 0
 
+    # ── Estruturas para o relatório final ─────────────────────────────────────
+    rel_lojas_sucesso = []        # [{"id", "nome"}]
+    rel_lojas_offline = []        # [{"id", "nome", "detalhe"}]
+    rel_lojas_erro_servidor = []  # [{"id", "nome", "detalhe"}]
+    rel_pdvs_erro = []            # [{"loja_id", "loja_nome", "caixa", "ip", "detalhe"}]
+
     for loja in lojas:
         loja_id  = str(loja["id"])
         loja_nom = loja.get("nome", f"Loja {loja_id}")
@@ -346,6 +360,9 @@ def run_broadcast_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv
         params["loja"] = loja_id
         params["loja_id"] = loja_id
 
+        loja_teve_erro = False
+        pdv_erros_loja = []
+
         try:
             store_info = worker.get_store_info(loja_id)
 
@@ -354,14 +371,33 @@ def run_broadcast_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv
                 sql_f = sql_servidor
                 for k, v in params.items():
                     sql_f = sql_f.replace(f"{{{k}}}", str(v))
-                worker.execute_sql(store_info["ip_servidor"], "LOJA", sql_f)
+                try:
+                    worker.execute_sql(store_info["ip_servidor"], "LOJA", sql_f)
+                except Exception as srv_e:
+                    detalhe_srv = str(srv_e)
+                    loja_teve_erro = True
+                    is_offline = "offline" in detalhe_srv.lower() or "1433" in detalhe_srv
+                    if is_offline:
+                        rel_lojas_offline.append({"id": loja_id, "nome": loja_nom, "alvo": "Servidor", "detalhe": detalhe_srv})
+                    else:
+                        rel_lojas_erro_servidor.append({"id": loja_id, "nome": loja_nom, "alvo": "Servidor", "detalhe": detalhe_srv})
+                    print(f"[AVISO] [BROADCAST] Servidor da {loja_nom}: {srv_e}")
 
             # — Servidor (banco PDV)
             if alvo == "SERVIDOR_PDV" and sql_pdv:
                 sql_f = sql_pdv
                 for k, v in params.items():
                     sql_f = sql_f.replace(f"{{{k}}}", str(v))
-                worker.execute_sql(store_info["ip_servidor"], "PDV", sql_f)
+                try:
+                    worker.execute_sql(store_info["ip_servidor"], "PDV", sql_f)
+                except Exception as srv_e:
+                    detalhe_srv = str(srv_e)
+                    loja_teve_erro = True
+                    is_offline = "offline" in detalhe_srv.lower() or "1433" in detalhe_srv
+                    if is_offline:
+                        rel_lojas_offline.append({"id": loja_id, "nome": loja_nom, "alvo": "Servidor (PDV)", "detalhe": detalhe_srv})
+                    else:
+                        rel_lojas_erro_servidor.append({"id": loja_id, "nome": loja_nom, "alvo": "Servidor (PDV)", "detalhe": detalhe_srv})
 
             # — Todos os caixas
             if alvo in ["TODOS_PDVS", "AMBOS"] and sql_pdv:
@@ -372,22 +408,66 @@ def run_broadcast_task(job_id: str, script_nome: str, sql_servidor: str, sql_pdv
                     try:
                         worker.execute_sql(pdv["ip"], "PDV", sql_f)
                     except Exception as pdv_e:
+                        detalhe_pdv = str(pdv_e)
+                        loja_teve_erro = True
+                        pdv_erros_loja.append({
+                            "loja_id": loja_id,
+                            "loja_nome": loja_nom,
+                            "caixa": pdv["caixa"],
+                            "ip": pdv["ip"],
+                            "detalhe": detalhe_pdv,
+                            "offline": "offline" in detalhe_pdv.lower() or "1433" in detalhe_pdv
+                        })
                         print(f"[AVISO] [BROADCAST] PDV {pdv['caixa']} da {loja_nom}: {pdv_e}")
                     time.sleep(0.3)
 
-            update_etapa(etapa_nome, "sucesso")
+            rel_pdvs_erro.extend(pdv_erros_loja)
+
+            if loja_teve_erro:
+                erros += 1
+                update_etapa(etapa_nome, "erro", detalhe="Falha parcial — verifique o relatório final.")
+            else:
+                update_etapa(etapa_nome, "sucesso")
+                rel_lojas_sucesso.append({"id": loja_id, "nome": loja_nom})
 
         except Exception as e:
             erros += 1
-            update_etapa(etapa_nome, "erro", detalhe=str(e))
+            detalhe_str = str(e)
+            update_etapa(etapa_nome, "erro", detalhe=detalhe_str)
+            is_offline = "offline" in detalhe_str.lower() or "1433" in detalhe_str
+            if is_offline:
+                rel_lojas_offline.append({"id": loja_id, "nome": loja_nom, "alvo": "Conexão", "detalhe": detalhe_str})
+            else:
+                rel_lojas_erro_servidor.append({"id": loja_id, "nome": loja_nom, "alvo": "Geral", "detalhe": detalhe_str})
             print(f"[ERRO] [BROADCAST] Falha na {loja_nom}: {e}")
 
         time.sleep(0.5)  # Pausa entre lojas para não sobrecarregar a rede
 
+    # ── Monta o relatório final ────────────────────────────────────────────────
+    total_pdvs_erro = len(rel_pdvs_erro)
+    total_offline = len(rel_lojas_offline)
+    total_erros_servidor = len(rel_lojas_erro_servidor)
+    total_sucesso = len(rel_lojas_sucesso)
+
+    relatorio = {
+        "script_nome": script_nome,
+        "total_lojas": len(lojas),
+        "total_sucesso": total_sucesso,
+        "total_offline": total_offline,
+        "total_erros_servidor": total_erros_servidor,
+        "total_pdvs_com_erro": total_pdvs_erro,
+        "lojas_sucesso": rel_lojas_sucesso,
+        "lojas_offline": rel_lojas_offline,
+        "lojas_erro_servidor": rel_lojas_erro_servidor,
+        "pdvs_com_erro": rel_pdvs_erro
+    }
+
     status_final = "concluido" if erros == 0 else ("erro" if erros == len(lojas) else "concluido")
     ACTIVE_JOBS[job_id]["status"] = status_final
     ACTIVE_JOBS[job_id]["erros_count"] = erros
-    print(f"[FIM] [BROADCAST FINALIZADO] {len(lojas) - erros}/{len(lojas)} lojas com sucesso.")
+    ACTIVE_JOBS[job_id]["relatorio"] = relatorio
+    print(f"[FIM] [BROADCAST FINALIZADO] {len(lojas) - erros}/{len(lojas)} lojas com sucesso. "
+          f"Offline: {total_offline} | Erros Servidor: {total_erros_servidor} | PDVs com erro: {total_pdvs_erro}")
     _atualizar_log_db(log_id, status_final)
 
 

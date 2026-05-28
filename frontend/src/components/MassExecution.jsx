@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, AlertTriangle, X, Search, CheckCircle, XCircle, WifiOff, RefreshCw, HelpCircle, ArrowLeft } from 'lucide-react';
+import { Radio, Play, AlertTriangle, X, Search, CheckCircle, XCircle, WifiOff, RefreshCw, HelpCircle, ArrowLeft, FileText, Clipboard, ClipboardCheck } from 'lucide-react';
 
 const API = `http://${window.location.hostname}:8080/api`;
 
@@ -23,6 +23,8 @@ export default function MassExecution() {
   const [monitoramentoAberto, setMonitoramentoAberto] = useState(false);
   const [jobStatus, setJobStatus] = useState(null);
   const [buscaLoja, setBuscaLoja] = useState('');
+  const [abaRelatorio, setAbaRelatorio] = useState('offline');
+  const [copiado, setCopiado] = useState(false);
 
   const pollRef = useRef(null);
 
@@ -158,6 +160,38 @@ export default function MassExecution() {
   const etapasFiltradas = etapas.filter(e => 
     e.nome.toLowerCase().includes(buscaLoja.toLowerCase())
   );
+
+  const copiarRelatorio = () => {
+    const rel = jobStatus?.relatorio;
+    if (!rel) return;
+    const linhas = [
+      `===== RELATÓRIO BROADCAST: ${rel.script_nome} =====`,
+      `Total de Lojas: ${rel.total_lojas}`,
+      `✅ Sucesso: ${rel.total_sucesso}`,
+      `📴 Offline: ${rel.total_offline}`,
+      `❌ Erros de Servidor: ${rel.total_erros_servidor}`,
+      `⚠️ PDVs com Erro: ${rel.total_pdvs_com_erro}`,
+      '',
+    ];
+    if (rel.lojas_offline?.length > 0) {
+      linhas.push('--- LOJAS OFFLINE / SEM CONEXÃO ---');
+      rel.lojas_offline.forEach(l => linhas.push(`  [${l.id}] ${l.nome} (${l.alvo}): ${l.detalhe}`));
+      linhas.push('');
+    }
+    if (rel.lojas_erro_servidor?.length > 0) {
+      linhas.push('--- ERROS NO SERVIDOR DA LOJA ---');
+      rel.lojas_erro_servidor.forEach(l => linhas.push(`  [${l.id}] ${l.nome} (${l.alvo}): ${l.detalhe}`));
+      linhas.push('');
+    }
+    if (rel.pdvs_com_erro?.length > 0) {
+      linhas.push('--- PDVs / CAIXAS COM FALHA ---');
+      rel.pdvs_com_erro.forEach(p => linhas.push(`  Loja [${p.loja_id}] ${p.loja_nome} | Caixa ${p.caixa} (${p.ip}): ${p.detalhe}`));
+    }
+    navigator.clipboard.writeText(linhas.join('\n')).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    });
+  };
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '3rem' }}>
@@ -660,40 +694,148 @@ export default function MassExecution() {
                 </div>
 
                 {/* Final Status Indicator */}
-                {jobStatus.status === 'concluido' && (
+                {(jobStatus.status === 'concluido' || jobStatus.status === 'erro') && (
                   <div style={{
                     textAlign: 'center',
-                    color: '#34d399',
+                    color: jobStatus.status === 'concluido' ? '#34d399' : '#ef4444',
                     fontWeight: 'bold',
                     fontSize: '15px',
                     padding: '8px',
-                    background: 'rgba(52,211,153,0.1)',
+                    background: jobStatus.status === 'concluido' ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(52,211,153,0.2)'
+                    border: `1px solid ${jobStatus.status === 'concluido' ? 'rgba(52,211,153,0.2)' : 'rgba(239,68,68,0.2)'}`
                   }}>
-                    🎉 Missão Cumprida! Script transmitido com sucesso.
+                    {jobStatus.status === 'concluido' && falhas === 0 && '🎉 Missão Cumprida! Script transmitido com sucesso.'}
+                    {jobStatus.status === 'concluido' && falhas > 0 && `⚠️ Concluído com falhas em ${falhas} loja(s). Veja o relatório.`}
+                    {jobStatus.status === 'erro' && '⚠️ Concluído com falha em algumas lojas da transmissão.'}
                   </div>
                 )}
-                {jobStatus.status === 'erro' && (
+
+                {/* ── RELATÓRIO FINAL ── */}
+                {(jobStatus.status === 'concluido' || jobStatus.status === 'erro') && jobStatus.relatorio && (
                   <div style={{
-                    textAlign: 'center',
-                    color: '#ef4444',
-                    fontWeight: 'bold',
-                    fontSize: '15px',
-                    padding: '8px',
-                    background: 'rgba(239,68,68,0.1)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(239,68,68,0.2)'
+                    background: 'rgba(0,0,0,0.25)',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    overflow: 'hidden'
                   }}>
-                    ⚠️ Concluído com falha em algumas lojas da transmissão.
+                    {/* Cabeçalho do Relatório */}
+                    <div style={{
+                      padding: '12px 14px',
+                      background: 'rgba(99,102,241,0.12)',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FileText size={15} color="#818cf8" /> Relatório Final de Execução
+                      </span>
+                      <button
+                        onClick={copiarRelatorio}
+                        title="Copiar relatório"
+                        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: copiado ? '#34d399' : '#94a3b8', borderRadius: '5px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        {copiado ? <><ClipboardCheck size={13} /> Copiado!</> : <><Clipboard size={13} /> Copiar</>}
+                      </button>
+                    </div>
+
+                    {/* Cards de Totais */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', padding: '12px 14px' }}>
+                      {[{
+                        label: 'Sucesso', val: jobStatus.relatorio.total_sucesso, color: '#34d399', bg: 'rgba(52,211,153,0.08)'
+                      }, {
+                        label: 'Offline', val: jobStatus.relatorio.total_offline, color: '#f97316', bg: 'rgba(249,115,22,0.08)'
+                      }, {
+                        label: 'Erro Servidor', val: jobStatus.relatorio.total_erros_servidor, color: '#f87171', bg: 'rgba(239,68,68,0.08)'
+                      }, {
+                        label: 'PDVs c/ Erro', val: jobStatus.relatorio.total_pdvs_com_erro, color: '#fbbf24', bg: 'rgba(251,191,36,0.08)'
+                      }].map(({ label, val, color, bg }) => (
+                        <div key={label} style={{ textAlign: 'center', background: bg, borderRadius: '6px', padding: '8px 4px' }}>
+                          <span style={{ display: 'block', fontSize: '9px', color, textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{label}</span>
+                          <strong style={{ fontSize: '18px', color }}>{val}</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Abas de Detalhes (apenas se houver algum erro) */}
+                    {(jobStatus.relatorio.total_offline > 0 || jobStatus.relatorio.total_erros_servidor > 0 || jobStatus.relatorio.total_pdvs_com_erro > 0) && (
+                      <>
+                        {/* Tabs */}
+                        <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          {[{
+                            key: 'offline', label: `📴 Offline (${jobStatus.relatorio.total_offline})`, show: jobStatus.relatorio.total_offline > 0
+                          }, {
+                            key: 'servidor', label: `❌ Servidor (${jobStatus.relatorio.total_erros_servidor})`, show: jobStatus.relatorio.total_erros_servidor > 0
+                          }, {
+                            key: 'pdvs', label: `⚠️ PDVs (${jobStatus.relatorio.total_pdvs_com_erro})`, show: jobStatus.relatorio.total_pdvs_com_erro > 0
+                          }].filter(t => t.show).map(tab => (
+                            <button
+                              key={tab.key}
+                              onClick={() => setAbaRelatorio(tab.key)}
+                              style={{
+                                flex: 1, padding: '8px 4px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                                background: abaRelatorio === tab.key ? 'rgba(99,102,241,0.15)' : 'transparent',
+                                color: abaRelatorio === tab.key ? '#818cf8' : '#64748b',
+                                border: 'none',
+                                borderBottom: abaRelatorio === tab.key ? '2px solid #818cf8' : '2px solid transparent',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Conteúdo da aba */}
+                        <div style={{ maxHeight: '160px', overflowY: 'auto', padding: '10px 14px' }}>
+                          {abaRelatorio === 'offline' && jobStatus.relatorio.lojas_offline?.map((l, i) => (
+                            <div key={i} style={{
+                              padding: '7px 10px', marginBottom: '5px', borderRadius: '6px',
+                              background: 'rgba(249,115,22,0.07)', borderLeft: '3px solid #f97316'
+                            }}>
+                              <span style={{ fontWeight: 600, fontSize: '12px', color: '#fed7aa' }}>[{l.id}] {l.nome}</span>
+                              <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '6px' }}>({l.alvo})</span>
+                              <div style={{ fontSize: '10px', color: '#f97316', marginTop: '3px', fontFamily: 'monospace', wordBreak: 'break-all' }}>{l.detalhe}</div>
+                            </div>
+                          ))}
+                          {abaRelatorio === 'servidor' && jobStatus.relatorio.lojas_erro_servidor?.map((l, i) => (
+                            <div key={i} style={{
+                              padding: '7px 10px', marginBottom: '5px', borderRadius: '6px',
+                              background: 'rgba(239,68,68,0.07)', borderLeft: '3px solid #ef4444'
+                            }}>
+                              <span style={{ fontWeight: 600, fontSize: '12px', color: '#fca5a5' }}>[{l.id}] {l.nome}</span>
+                              <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '6px' }}>({l.alvo})</span>
+                              <div style={{ fontSize: '10px', color: '#f87171', marginTop: '3px', fontFamily: 'monospace', wordBreak: 'break-all' }}>{l.detalhe}</div>
+                            </div>
+                          ))}
+                          {abaRelatorio === 'pdvs' && jobStatus.relatorio.pdvs_com_erro?.map((p, i) => (
+                            <div key={i} style={{
+                              padding: '7px 10px', marginBottom: '5px', borderRadius: '6px',
+                              background: p.offline ? 'rgba(249,115,22,0.07)' : 'rgba(251,191,36,0.07)',
+                              borderLeft: `3px solid ${p.offline ? '#f97316' : '#fbbf24'}`
+                            }}>
+                              <span style={{ fontWeight: 600, fontSize: '12px', color: p.offline ? '#fed7aa' : '#fde68a' }}>
+                                [{p.loja_id}] {p.loja_nome} — Caixa {p.caixa}
+                              </span>
+                              <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '6px' }}>({p.ip})</span>
+                              <div style={{ fontSize: '10px', color: p.offline ? '#f97316' : '#fbbf24', marginTop: '3px', fontFamily: 'monospace', wordBreak: 'break-all' }}>{p.detalhe}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {jobStatus.relatorio.total_offline === 0 && jobStatus.relatorio.total_erros_servidor === 0 && jobStatus.relatorio.total_pdvs_com_erro === 0 && (
+                      <div style={{ padding: '12px 14px', color: '#34d399', fontSize: '12px', textAlign: 'center' }}>✅ Nenhum erro registrado.</div>
+                    )}
                   </div>
                 )}
 
                 {/* Close Button */}
                 {(jobStatus.status === 'concluido' || jobStatus.status === 'erro') && (
-                  <button 
-                    className="btn" 
-                    onClick={() => setMonitoramentoAberto(false)} 
+                  <button
+                    className="btn"
+                    onClick={() => setMonitoramentoAberto(false)}
                     style={{ background: '#475569', width: '100%', justifyContent: 'center' }}
                   >
                     Fechar Radar de Transmissão
