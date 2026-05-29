@@ -40,8 +40,8 @@ function ProtectedRoute({ children, permission }) {
     return <Navigate to="/" replace />;
   }
 
-  // TI e Admin sempre têm acesso a todas as rotas
-  if (role === 'Admin' || role === 'TI' || role === 'Administradores') {
+  // Admin sempre tem acesso a todas as rotas
+  if (role === 'Admin' || role === 'Administradores') {
     return children;
   }
 
@@ -57,9 +57,9 @@ function Navbar() {
   const role = localStorage.getItem('role') || '';
   const permissions = localStorage.getItem('permissions') || '';
 
-  // TI e Admin sempre têm todas as permissões no frontend (evita deslogar após atualização)
+  // Admin sempre tem todas as permissões no frontend (evita deslogar após atualização)
   const hasPermission = (permission) => {
-    if (role === 'Admin' || role === 'TI' || role === 'Administradores') return true;
+    if (role === 'Admin' || role === 'Administradores') return true;
     return permissions.includes(permission);
   };
 

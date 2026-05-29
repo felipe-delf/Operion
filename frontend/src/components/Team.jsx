@@ -119,7 +119,7 @@ function TreeNode({
           >
             <Pencil size={11} />
           </button>
-          {node.nome !== 'TI' && node.nome !== 'Administradores' && (
+          {node.nome !== 'Administradores' && (
             <button
               className="btn"
               onClick={() => handleDeleteGroup(node.id, node.nome)}
@@ -237,7 +237,7 @@ export default function Team() {
   useEffect(() => {
     const role  = localStorage.getItem('role');
     const perms = localStorage.getItem('permissions') || '';
-    if (role !== 'TI' && role !== 'Administradores' && role !== 'Admin' && !perms.includes('GERENCIAR_EQUIPE')) {
+    if (role !== 'Administradores' && role !== 'Admin' && !perms.includes('GERENCIAR_EQUIPE')) {
       alert('Acesso Negado: Apenas Administradores podem gerenciar equipe.');
       navigate('/dashboard');
       return;
@@ -392,7 +392,7 @@ export default function Team() {
   };
 
   const handleDeleteGroup = async (id, nome) => {
-    if (nome === 'TI' || nome === 'Administradores') { alert('Esse grupo não pode ser excluído.'); return; }
+    if (nome === 'Administradores') { alert('Esse grupo não pode ser excluído.'); return; }
     if (!window.confirm(`Excluir o grupo "${nome}"?`)) return;
     const res = await fetch(`${API}/api/usuarios/grupos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
     if (res.ok) { alert('Grupo excluído!'); loadData(); }
@@ -795,7 +795,7 @@ export default function Team() {
             <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldAlert size={20} color="#3b82f6" /> Configurar Grupo: {grupoSelecionado?.nome}</h3>
             <div style={{ marginBottom: '1rem', marginTop: '1rem' }}>
               <label style={{ fontSize: '13px', fontWeight: 500 }}>Nome do Grupo</label>
-              <input type="text" value={nomeGrupoEdicao} onChange={e => setNomeGrupoEdicao(e.target.value)} disabled={grupoSelecionado?.nome === 'TI' || grupoSelecionado?.nome === 'Administradores'} required style={inputStyle} />
+              <input type="text" value={nomeGrupoEdicao} onChange={e => setNomeGrupoEdicao(e.target.value)} disabled={grupoSelecionado?.nome === 'Administradores'} required style={inputStyle} />
             </div>
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ fontSize: '13px', fontWeight: 500 }}>Descrição / Setor</label>
@@ -803,7 +803,7 @@ export default function Team() {
             </div>
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ fontSize: '13px', fontWeight: 500 }}>Grupo Superior / Pai</label>
-              <select value={grupoParentIdEdicao} onChange={e => setGrupoParentIdEdicao(e.target.value)} style={inputStyle} disabled={grupoSelecionado?.nome === 'TI' || grupoSelecionado?.nome === 'Administradores'}>
+              <select value={grupoParentIdEdicao} onChange={e => setGrupoParentIdEdicao(e.target.value)} style={inputStyle} disabled={grupoSelecionado?.nome === 'Administradores'}>
                 <option value="" style={{ background: '#1e293b', color: '#94a3b8' }}>-- Nenhum (Grupo Raiz) --</option>
                 {grupos.filter(g => g.id !== grupoSelecionado?.id && !isDescendant(g.id, grupoSelecionado?.id)).map(g => (
                   <option key={g.id} value={g.id} style={{ background: '#1e293b', color: 'white' }}>{g.nome}</option>
@@ -816,7 +816,7 @@ export default function Team() {
                 {SISTEM_PERMISSIONS.map(p => {
                   const herdada = obterPermissoesHerdadas(grupoParentIdEdicao).includes(p.key);
                   const marcada = herdada || permissoesGrupoEdicao.includes(p.key);
-                  const isProtectedGroup = grupoSelecionado?.nome === 'TI' || grupoSelecionado?.nome === 'Administradores';
+                  const isProtectedGroup = grupoSelecionado?.nome === 'Administradores';
                   return (
                     <div key={p.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '4px 0' }}>
                       <input
