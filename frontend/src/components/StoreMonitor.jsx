@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Server, Monitor, Play, ArrowLeft, X, WifiOff, AlertTriangle, RefreshCw,
          User, Clock, Cpu, MemoryStick, Network, HardDrive, Database, HelpCircle } from 'lucide-react';
+import { API as BASE_API } from '../config';
 
-const API = `http://${window.location.hostname}:8080/api`;
+const API = `${BASE_API}/api`;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatUptime(s) {

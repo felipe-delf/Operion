@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Radio, Play, AlertTriangle, X, Search, CheckCircle, WifiOff, RefreshCw, ArrowLeft, FileText, Clipboard, ClipboardCheck } from 'lucide-react';
+import { API as BASE_API } from '../config';
 
-const API = `http://${window.location.hostname}:8080/api`;
+const API = `${BASE_API}/api`;
 
 export default function MassExecution() {
   const navigate = useNavigate();

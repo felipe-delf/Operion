@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Code, Save, Database, Server, CheckSquare, ListPlus, Pencil, Trash2, X, HelpCircle } from 'lucide-react';
+import { API } from '../config';
 
 export default function AdminScripts() {
   const [scripts, setScripts] = useState([]);
@@ -17,7 +18,7 @@ export default function AdminScripts() {
 
   const loadScripts = () => {
     const token = localStorage.getItem('token');
-    fetch(`http://${window.location.hostname}:8080/api/scripts/`, {
+    fetch(`${API}/api/scripts/`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -64,7 +65,7 @@ export default function AdminScripts() {
     if (!window.confirm("Certeza absoluta que quer deletar esse script?")) return;
     const token = localStorage.getItem('token');
     
-    const res = await fetch(`http://${window.location.hostname}:8080/api/scripts/${id}`, {
+    const res = await fetch(`${API}/api/scripts/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -82,7 +83,7 @@ export default function AdminScripts() {
     const token = localStorage.getItem('token');
     const parametros_exigidos = exigeCaixa ? ["caixa"] : [];
 
-    const url = editandoId ? `http://${window.location.hostname}:8080/api/scripts/${editandoId}` : `http://${window.location.hostname}:8080/api/scripts/`;
+    const url = editandoId ? `${API}/api/scripts/${editandoId}` : `${API}/api/scripts/`;
     const method = editandoId ? 'PUT' : 'POST';
 
     const res = await fetch(url, {

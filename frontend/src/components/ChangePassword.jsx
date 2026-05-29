@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ShieldAlert, Key } from 'lucide-react';
+import { API } from '../config';
 
 export default function ChangePassword() {
   const [senha, setSenha] = useState('');
@@ -23,7 +24,7 @@ export default function ChangePassword() {
     }
 
     try {
-      const res = await fetch(`http://${window.location.hostname}:8080/api/auth/mudar_senha/${userId}`, {
+      const res = await fetch(`${API}/api/auth/mudar_senha/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nova_senha: senha })

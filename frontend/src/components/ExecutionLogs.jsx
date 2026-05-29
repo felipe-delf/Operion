@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Search, X, RefreshCw, User, Building2, Calendar, Target, Hash } from 'lucide-react';
+import { API as BASE_API } from '../config';
 
-const API = `http://${window.location.hostname}:8080/api`;
+const API = `${BASE_API}/api`;
 
 const ALVO_LABEL = {
   AMBOS:           'Servidor + Todos Caixas',

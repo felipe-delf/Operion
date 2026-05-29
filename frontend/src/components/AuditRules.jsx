@@ -4,8 +4,7 @@ import {
   ShieldCheck, Save, Trash2, PlusCircle, Server, Monitor, Pencil,
   X, FolderPlus, Layers, Database, TextCursor
 } from 'lucide-react';
-
-const API = `http://${window.location.hostname}:8080`;
+import { API } from '../config';
 
 const inputStyle = {
   width: '100%', padding: '9px 12px', marginTop: '6px', borderRadius: '8px',
@@ -58,10 +57,10 @@ export default function AuditRules() {
   useEffect(() => {
     const activeRole = localStorage.getItem('role');
     const permissions = localStorage.getItem('permissions') || '';
-    
+
     if (activeRole !== 'TI' && activeRole !== 'Administradores' && activeRole !== 'Admin' && !permissions.includes('GERENCIAR_AUDITORIA')) {
       alert('Acesso Negado: Você não tem permissão para gerenciar a auditoria.');
-      navigate('/dashboard'); 
+      navigate('/dashboard');
       return;
     }
     carregarTudo();

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, Search, X } from 'lucide-react';
+import { API } from '../config';
 
 export default function Dashboard() {
   const [lojas, setLojas]   = useState([]);
@@ -9,7 +10,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch(`http://${window.location.hostname}:8080/api/lojas/`, {
+    fetch(`${API}/api/lojas/`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())

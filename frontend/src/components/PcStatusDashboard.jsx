@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Monitor, Wifi, WifiOff, AlertTriangle, RefreshCw, Server, ShoppingCart,
          User, Clock, Cpu, MemoryStick, Database, Network, HardDrive } from 'lucide-react';
+import { API as BASE_API } from '../config';
 
-const API = `http://${window.location.hostname}:8080/api`;
+const API = `${BASE_API}/api`;
 
 function formatUptime(s) {
   if (s == null) return '—';

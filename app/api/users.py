@@ -6,13 +6,20 @@ from app.models.user import UserModel
 from app.models.user_group import UserGroupModel
 from app.models.script import ScriptModel
 from app.schemas.user_schema import UserCreate, UserResponse, UserUpdate, UserGroupCreate, UserGroupResponse
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, get_current_user
 from pydantic import BaseModel
 
 class PermissionsUpdate(BaseModel):
     script_ids: List[int]
 
 router = APIRouter()
+
+def check_gerenciar_equipe(current_user: dict):
+    if "GERENCIAR_EQUIPE" not in current_user.get("permissions", ""):
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso negado. Você não tem permissão para gerenciar a equipe."
+        )
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  USER GROUPS (DYNAMICAL PERMISSIONS)
@@ -37,11 +44,12 @@ def check_circular_parent(grupo_id: int, parent_id: int, db: Session) -> bool:
     return False
 
 @router.get("/grupos/", response_model=List[UserGroupResponse], tags=["Admin - Grupos"])
-def listar_grupos(db: Session = Depends(get_db)):
+def listar_grupos(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     return db.query(UserGroupModel).all()
 
 @router.post("/grupos/", response_model=UserGroupResponse, tags=["Admin - Grupos"])
-def criar_grupo(req: UserGroupCreate, db: Session = Depends(get_db)):
+def criar_grupo(req: UserGroupCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     existente = db.query(UserGroupModel).filter(UserGroupModel.nome == req.nome).first()
     if existente:
         raise HTTPException(status_code=400, detail="Já existe um grupo com este nome.")
@@ -63,7 +71,8 @@ def criar_grupo(req: UserGroupCreate, db: Session = Depends(get_db)):
     return novo_grupo
 
 @router.put("/grupos/{grupo_id}", response_model=UserGroupResponse, tags=["Admin - Grupos"])
-def editar_grupo(grupo_id: int, req: UserGroupCreate, db: Session = Depends(get_db)):
+def editar_grupo(grupo_id: int, req: UserGroupCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     grupo = db.query(UserGroupModel).filter(UserGroupModel.id == grupo_id).first()
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -90,7 +99,8 @@ def editar_grupo(grupo_id: int, req: UserGroupCreate, db: Session = Depends(get_
     return grupo
 
 @router.delete("/grupos/{grupo_id}", tags=["Admin - Grupos"])
-def deletar_grupo(grupo_id: int, db: Session = Depends(get_db)):
+def deletar_grupo(grupo_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     grupo = db.query(UserGroupModel).filter(UserGroupModel.id == grupo_id).first()
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -124,11 +134,12 @@ def deletar_grupo(grupo_id: int, db: Session = Depends(get_db)):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @router.get("/", response_model=List[UserResponse], tags=["Admin - Usuários"])
-def listar_usuarios(db: Session = Depends(get_db)):
+def listar_usuarios(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     return db.query(UserModel).all()
 
 @router.post("/", response_model=UserResponse, tags=["Admin - Usuários"])
-def criar_usuario(req: UserCreate, db: Session = Depends(get_db)):
+def criar_usuario(req: UserCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     user_db = db.query(UserModel).filter(UserModel.email == req.email).first()
     if user_db:
         raise HTTPException(status_code=400, detail="Este e-mail já está em uso.")
@@ -146,7 +157,8 @@ def criar_usuario(req: UserCreate, db: Session = Depends(get_db)):
     return novo_usuario
 
 @router.put("/{user_id}/resetar_senha", tags=["Admin - Usuários"])
-def resetar_senha(user_id: int, db: Session = Depends(get_db)):
+def resetar_senha(user_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -157,7 +169,8 @@ def resetar_senha(user_id: int, db: Session = Depends(get_db)):
     return {"message": f"Senha de {user.email} resetada para 'mudar123'."}
 
 @router.put("/{user_id}", response_model=UserResponse, tags=["Admin - Usuários"])
-def editar_usuario(user_id: int, req: UserUpdate, db: Session = Depends(get_db)):
+def editar_usuario(user_id: int, req: UserUpdate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -190,14 +203,15 @@ def editar_usuario(user_id: int, req: UserUpdate, db: Session = Depends(get_db))
     return user
 
 @router.get("/{user_id}/permissoes", tags=["Admin - Usuários"])
-def listar_permissoes(user_id: int, db: Session = Depends(get_db)):
+def listar_permissoes(user_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return [script.id for script in user.scripts_permitidos]
 
 @router.post("/{user_id}/permissoes", tags=["Admin - Usuários"])
-def salvar_permissoes(user_id: int, req: PermissionsUpdate, db: Session = Depends(get_db)):
+def salvar_permissoes(user_id: int, req: PermissionsUpdate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    check_gerenciar_equipe(current_user)
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")

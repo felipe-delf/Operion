@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, KeyRound, ShieldAlert, X, Pencil, CheckCircle, XCircle, ShieldCheck, FolderPlus, ChevronRight, ChevronDown, Building, Folder, FolderOpen, Shield, GripVertical } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8080';
+import { API } from '../config';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TreeNode — apenas renderização + dispara onDragStart
