@@ -107,10 +107,12 @@ def deletar_script(script_id: int, db: Session = Depends(get_db), current_user: 
 
 @router.get("/lojas/", tags=["Dashboard e Lojas"])
 def listar_lojas(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    conn = None
     try:
         worker = OdbcWorker()
         conn = worker.connect_retaguarda()
         cursor = conn.cursor()
+        cursor.timeout = 10  # Timeout de 10s para a query — evita lock aberto na Retaguarda
         query = """
         SELECT L.LOJA, L.NOME_RESUMIDO, P.INSCRICAO_FEDERAL
         FROM LOJAS L WITH(NOLOCK)
@@ -120,13 +122,18 @@ def listar_lojas(db: Session = Depends(get_db), current_user: dict = Depends(get
         """
         cursor.execute(query)
         rows = cursor.fetchall()
-        conn.close()
 
         lojas = [{"id": int(r[0]), "nome": r[1], "cnpj": str(r[2]).strip() if r[2] else "N/D"} for r in rows]
         return lojas
     except Exception as e:
         print(f"Erro ao buscar lojas: {e}")
         return []
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @router.get("/lojas/{loja_id}/status", tags=["Dashboard e Monitor"])
@@ -233,10 +240,12 @@ def executar_broadcast(
         raise HTTPException(status_code=404, detail="Script não encontrado")
     
     # 1. Busca todas as lojas ativas na Retaguarda para saber onde aplicar (excluindo 990 e 900)
+    conn = None
     try:
         worker = OdbcWorker()
         conn = worker.connect_retaguarda()
         cursor = conn.cursor()
+        cursor.timeout = 10  # Timeout de 10s para a query — evita lock aberto na Retaguarda
         query = """
         SELECT L.LOJA, L.NOME_RESUMIDO
         FROM LOJAS L WITH(NOLOCK)
@@ -245,10 +254,15 @@ def executar_broadcast(
         """
         cursor.execute(query)
         rows = cursor.fetchall()
-        conn.close()
         lojas = [{"id": int(r[0]), "nome": r[1]} for r in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao carregar lojas da Retaguarda para broadcast: {e}")
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     if not lojas:
         raise HTTPException(status_code=400, detail="Nenhuma loja ativa encontrada para executar o broadcast")

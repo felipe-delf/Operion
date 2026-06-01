@@ -67,7 +67,13 @@ class OdbcWorker:
         self.lojas_uid = os.getenv('LOJAS_UID', 'sa')
         self.lojas_pwd = os.getenv('LOJAS_PWD', 'SenhaForteAqui')
 
-    def connect_retaguarda(self):
+    def connect_retaguarda(self, query_timeout: int = 10):
+        """
+        Abre uma conexão com a Retaguarda.
+        - LoginTimeout (via connection string): tempo máximo para estabelecer a conexão.
+        - query_timeout: tempo máximo (em segundos) para execução de cada query via cursor.timeout.
+          Defina cursor.timeout = query_timeout logo após chamar conn.cursor().
+        """
         try:
             conn_str = _build_connection_string(
                 self.retaguarda_ip,
@@ -76,33 +82,42 @@ class OdbcWorker:
                 self.password,
                 timeout=5
             )
-            return pyodbc.connect(conn_str, timeout=5)
+            conn = pyodbc.connect(conn_str, timeout=5)
+            conn._query_timeout = query_timeout  # Armazena para uso posterior
+            return conn
         except Exception as e:
             print(f"[ERRO] [WORKER] Erro ao conectar na Retaguarda: {e}")
             raise WorkerExecutionError(f"Falha de conexão com a Retaguarda: {e}")
 
     def get_store_info(self, loja_id):
         print(f"[BUSCA] [WORKER] Buscando dados da loja {loja_id} na Retaguarda...")
-        conn = self.connect_retaguarda()
-        cursor = conn.cursor()
-        
-        # Busca o IP do Servidor da Loja
-        cursor.execute(f"SELECT IP_SERVIDOR_LOJA FROM LOJAS WHERE LOJA = {loja_id}")
-        row = cursor.fetchone()
-        
-        if not row:
-            conn.close()
-            raise WorkerExecutionError(f"Loja {loja_id} não encontrada na Retaguarda.")
-            
-        ip_servidor = row[0]
-        
-        # Busca os PDVs atrelados à Loja
-        cursor.execute(f"SELECT B.CAIXA, B.IP FROM LOJAS A INNER JOIN LOJAS_PDV B ON B.REGISTRO = A.REGISTRO WHERE A.LOJA = {loja_id}")
-        pdvs = [{"caixa": int(r[0]), "ip": r[1]} for r in cursor.fetchall()]
-        
-        conn.close()
-        print(f"[OK] [WORKER] Dados da loja {loja_id} encontrados. Servidor: {ip_servidor}, PDVs: {len(pdvs)}")
-        return {"ip_servidor": ip_servidor, "pdvs": pdvs}
+        conn = None
+        try:
+            conn = self.connect_retaguarda()
+            cursor = conn.cursor()
+            cursor.timeout = 10  # Timeout de 10s por query — evita lock aberto na Retaguarda
+
+            # Busca o IP do Servidor da Loja
+            cursor.execute(f"SELECT IP_SERVIDOR_LOJA FROM LOJAS WHERE LOJA = {loja_id}")
+            row = cursor.fetchone()
+
+            if not row:
+                raise WorkerExecutionError(f"Loja {loja_id} não encontrada na Retaguarda.")
+
+            ip_servidor = row[0]
+
+            # Busca os PDVs atrelados à Loja
+            cursor.execute(f"SELECT B.CAIXA, B.IP FROM LOJAS A INNER JOIN LOJAS_PDV B ON B.REGISTRO = A.REGISTRO WHERE A.LOJA = {loja_id}")
+            pdvs = [{"caixa": int(r[0]), "ip": r[1]} for r in cursor.fetchall()]
+
+            print(f"[OK] [WORKER] Dados da loja {loja_id} encontrados. Servidor: {ip_servidor}, PDVs: {len(pdvs)}")
+            return {"ip_servidor": ip_servidor, "pdvs": pdvs}
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def execute_sql(self, ip_alvo, base, sql, timeout=10):
         """
