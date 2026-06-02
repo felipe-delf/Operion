@@ -121,7 +121,6 @@ def listar_lojas(db: Session = Depends(get_db), current_user: dict = Depends(get
         """
         cursor.execute(query)
         rows = cursor.fetchall()
-
         lojas = [{"id": int(r[0]), "nome": r[1], "cnpj": str(r[2]).strip() if r[2] else "N/D"} for r in rows]
         return lojas
     except Exception as e:

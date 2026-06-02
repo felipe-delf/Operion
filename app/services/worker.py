@@ -4,6 +4,12 @@ import time
 import socket
 import re
 
+# Desabilita o connection pooling do pyodbc.
+# Por padrão, conn.close() apenas devolve a conexão ao pool — a sessão
+# permanece aberta no SQL Server, acumulando conexões ociosas.
+# Com pooling=False, conn.close() encerra a sessão de verdade.
+pyodbc.pooling = False
+
 ACTIVE_JOBS = {}
 
 class WorkerExecutionError(Exception):
@@ -185,12 +191,17 @@ class OdbcWorker:
                 timeout=timeout
             )
             conn = pyodbc.connect(conn_str, timeout=timeout)
-            cursor = conn.cursor()
-            cursor.execute(sql)
-            row = cursor.fetchone()
-            conn.close()
-            return str(row[0]) if row else ""
-            
+            try:
+                cursor = conn.cursor()
+                cursor.execute(sql)
+                row = cursor.fetchone()
+                return str(row[0]) if row else ""
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         future = executor.submit(_connect_and_run)
         try:
