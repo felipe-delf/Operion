@@ -112,7 +112,6 @@ def listar_lojas(db: Session = Depends(get_db), current_user: dict = Depends(get
         worker = OdbcWorker()
         conn = worker.connect_retaguarda()
         cursor = conn.cursor()
-        cursor.timeout = 10  # Timeout de 10s para a query — evita lock aberto na Retaguarda
         query = """
         SELECT L.LOJA, L.NOME_RESUMIDO, P.INSCRICAO_FEDERAL
         FROM LOJAS L WITH(NOLOCK)
@@ -245,7 +244,6 @@ def executar_broadcast(
         worker = OdbcWorker()
         conn = worker.connect_retaguarda()
         cursor = conn.cursor()
-        cursor.timeout = 10  # Timeout de 10s para a query — evita lock aberto na Retaguarda
         query = """
         SELECT L.LOJA, L.NOME_RESUMIDO
         FROM LOJAS L WITH(NOLOCK)

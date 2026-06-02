@@ -70,9 +70,8 @@ class OdbcWorker:
     def connect_retaguarda(self, query_timeout: int = 10):
         """
         Abre uma conexão com a Retaguarda.
-        - LoginTimeout (via connection string): tempo máximo para estabelecer a conexão.
-        - query_timeout: tempo máximo (em segundos) para execução de cada query via cursor.timeout.
-          Defina cursor.timeout = query_timeout logo após chamar conn.cursor().
+        - LoginTimeout (via connection string): tempo máximo para estabelecer a conexão TCP.
+        - O timeout de query é controlado via QueryTimeout na connection string.
         """
         try:
             conn_str = _build_connection_string(
@@ -83,7 +82,6 @@ class OdbcWorker:
                 timeout=5
             )
             conn = pyodbc.connect(conn_str, timeout=5)
-            conn._query_timeout = query_timeout  # Armazena para uso posterior
             return conn
         except Exception as e:
             print(f"[ERRO] [WORKER] Erro ao conectar na Retaguarda: {e}")
@@ -95,7 +93,6 @@ class OdbcWorker:
         try:
             conn = self.connect_retaguarda()
             cursor = conn.cursor()
-            cursor.timeout = 10  # Timeout de 10s por query — evita lock aberto na Retaguarda
 
             # Busca o IP do Servidor da Loja
             cursor.execute(f"SELECT IP_SERVIDOR_LOJA FROM LOJAS WHERE LOJA = {loja_id}")
