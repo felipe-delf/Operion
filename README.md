@@ -120,7 +120,7 @@ Ao iniciar pela primeira vez, o sistema cria automaticamente um usuário adminis
 ## 🧪 Testes Automatizados
 
 ```bash
-pip install -r requirements-test.txt
+pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
 
