@@ -6,6 +6,7 @@ from datetime import datetime
 class ScriptBase(BaseModel):
     nome: str
     descricao: Optional[str] = None
+    grupo: Optional[str] = None
     sql_servidor: Optional[str] = None
     sql_pdv: Optional[str] = None
     parametros_exigidos: Optional[List[str]] = []
@@ -47,3 +48,11 @@ class ExecutionLogResponse(BaseModel):
     job_id: Optional[str] = None
     status_final: Optional[str] = None
     executado_em: Optional[datetime] = None
+
+
+class ExecutionLogPage(BaseModel):
+    items: List[ExecutionLogResponse]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int

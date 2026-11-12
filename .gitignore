@@ -16,6 +16,9 @@ parametrizacao.db
 *.db-journal
 *.sqlite
 *.sqlite3
+/data/
+backups/
+*.bak
 
 # Ambientes virtuais Python
 venv/

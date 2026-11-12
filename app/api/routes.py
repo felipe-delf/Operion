@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.models.script import ScriptModel
 from app.models.user import UserModel
 from app.models.execution_log import ExecutionLogModel
-from app.schemas.script_schema import ScriptCreate, ScriptResponse, ExecutionLogResponse
+from app.schemas.script_schema import ScriptCreate, ScriptResponse, ExecutionLogResponse, ExecutionLogPage
 from app.core.security import get_current_user
 from app.services.worker import run_script_task, run_store_scan, run_broadcast_task, ACTIVE_JOBS, OdbcWorker
 from app.models.audit import AuditRuleModel
@@ -73,6 +73,7 @@ def atualizar_script(script_id: int, req: ScriptCreate, db: Session = Depends(ge
 
     script.nome                = req.nome
     script.descricao           = req.descricao
+    script.grupo               = req.grupo
     script.sql_servidor        = req.sql_servidor
     script.sql_pdv             = req.sql_pdv
     script.parametros_exigidos = req.parametros_exigidos
@@ -347,29 +348,47 @@ def executar_broadcast(
 
 
 
-@router.get("/execucoes/logs/", response_model=List[ExecutionLogResponse], tags=["Admin - Logs"])
+@router.get("/execucoes/logs/", response_model=ExecutionLogPage, tags=["Admin - Logs"])
 def listar_logs_execucao(
-    limit: int = 200,
+    page: int = 1,
+    page_size: int = 25,
+    busca: str = "",
+    script: str = "",
+    loja: str = "",
+    status_final: str = "",
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Histórico completo de quem executou qual script, quando e em qual loja.
-    ⚠️ Acesso restrito.
-    """
+    """Histórico paginado e filtrável das execuções."""
     if "VER_LOGS" not in current_user.get("permissions", ""):
-        raise HTTPException(
-            status_code=403,
-            detail="Acesso negado. Você não tem permissão para visualizar os logs de execução."
+        raise HTTPException(status_code=403, detail="Acesso negado. Você não tem permissão para visualizar os logs de execução.")
+    page = max(page, 1)
+    page_size = min(max(page_size, 1), 100)
+    query = db.query(ExecutionLogModel)
+    if script:
+        query = query.filter(ExecutionLogModel.script_nome == script)
+    if loja:
+        query = query.filter(ExecutionLogModel.loja_id == loja)
+    if status_final:
+        query = query.filter(ExecutionLogModel.status_final == status_final)
+    if busca:
+        term = f"%{busca.strip()}%"
+        query = query.filter(
+            ExecutionLogModel.usuario_email.ilike(term)
+            | ExecutionLogModel.script_nome.ilike(term)
+            | ExecutionLogModel.loja_id.ilike(term)
+            | ExecutionLogModel.alvo.ilike(term)
+            | ExecutionLogModel.job_id.ilike(term)
         )
-
-    logs = (
-        db.query(ExecutionLogModel)
-        .order_by(ExecutionLogModel.id.desc())
-        .limit(limit)
-        .all()
-    )
-    return logs
+    total = query.count()
+    logs = query.order_by(ExecutionLogModel.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return {
+        "items": logs,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": (total + page_size - 1) // page_size,
+    }
 
 
 @router.get("/execucoes/{job_id}/status", tags=["Execução ODBC"])

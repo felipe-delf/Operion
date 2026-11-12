@@ -60,20 +60,21 @@ export default function Dashboard() {
             value={busca}
             onChange={e => setBusca(e.target.value)}
             placeholder="Buscar loja por nome, número ou CNPJ..."
+            className="store-search"
             style={{
               width: '100%',
               padding: '10px 36px 10px 38px',
               borderRadius: '10px',
-              background: 'rgba(255,255,255,0.06)',
-              color: 'white',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'var(--input-bg)',
+              color: 'var(--input-text)',
+              border: '1px solid var(--border)',
               fontSize: '14px',
               outline: 'none',
               transition: 'border 0.2s',
               boxSizing: 'border-box',
             }}
-            onFocus={e => e.target.style.borderColor = 'rgba(129,140,248,0.6)'}
-            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
           />
           {busca && (
             <button

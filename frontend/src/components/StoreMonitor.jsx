@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Server, Monitor, Play, ArrowLeft, X, WifiOff, AlertTriangle, RefreshCw,
+import { Server, Monitor, Play, ArrowLeft, ChevronLeft, ChevronRight, X, WifiOff, AlertTriangle, RefreshCw,
          User, Clock, Cpu, MemoryStick, Network, HardDrive, Database, HelpCircle } from 'lucide-react';
 import { API as BASE_API } from '../config';
 
@@ -69,7 +69,7 @@ function PcInfoChip({ icon, label, value, color }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#475569', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         <span style={{ color, display: 'flex' }}>{icon}</span> {label}
       </div>
-      <div style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>
         {value}
       </div>
     </div>
@@ -291,7 +291,9 @@ export default function StoreMonitor() {
   const navigate = useNavigate();
 
   const [status, setStatus] = useState(null);
+  const [lojas, setLojas] = useState([]);
   const [scripts, setScripts] = useState([]);
+  const [gruposAbertos, setGruposAbertos] = useState({});
   const [pcMap, setPcMap] = useState({});
   const [wmiScanning, setWmiScanning] = useState(false);
 
@@ -378,6 +380,11 @@ export default function StoreMonitor() {
   }, [id, token]);
 
   useEffect(() => {
+    fetch(`${API}/lojas/`, { headers })
+      .then(r => r.json())
+      .then(data => setLojas(Array.isArray(data) ? [...data].sort((a, b) => Number(a.id) - Number(b.id)) : []))
+      .catch(() => setLojas([]));
+
     fetchAuditStatus();
 
     fetch(`${API}/scripts/?apenas_publicados=true`, { headers })
@@ -460,6 +467,19 @@ export default function StoreMonitor() {
     }, 1000);
   };
 
+  const indiceLojaAtual = lojas.findIndex(loja => String(loja.id) === String(id));
+  const lojaAnterior = indiceLojaAtual > 0 ? lojas[indiceLojaAtual - 1] : null;
+  const proximaLoja = indiceLojaAtual >= 0 && indiceLojaAtual < lojas.length - 1
+    ? lojas[indiceLojaAtual + 1]
+    : null;
+
+  const navegarParaLoja = (loja) => {
+    if (!loja) return;
+    setStatus(null);
+    setPcMap({});
+    navigate(`/loja/${loja.id}`);
+  };
+
   // ── Loading ──
   if (!status) return (
     <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
@@ -473,30 +493,55 @@ export default function StoreMonitor() {
   return (
     <div>
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="btn" onClick={() => navigate('/dashboard')} style={{ background: 'transparent', padding: '8px' }}>
-            <ArrowLeft size={20} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
+          <button
+            className="store-back-button"
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            aria-label="Voltar para o painel de lojas"
+            title="Voltar para o painel de lojas"
+          >
+            <ArrowLeft size={19} strokeWidth={2.5} />
           </button>
-          <h2 style={{ margin: 0 }}>Monitoramento: Loja {id}</h2>
+          <h2 style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Monitoramento: Loja {id}</h2>
         </div>
 
-        {/* Botão de atualização manual + indicador de scan automático */}
-        <button
-          onClick={handleWmiScan}
-          disabled={wmiScanning}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: wmiScanning ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.6)',
-            border: '1px solid rgba(99,102,241,0.4)', borderRadius: '8px',
-            color: wmiScanning ? '#818cf8' : 'white', padding: '8px 16px',
-            cursor: wmiScanning ? 'default' : 'pointer',
-            fontSize: '13px', fontWeight: 600, transition: 'all 0.2s'
-          }}
-        >
-          <RefreshCw size={14} style={{ animation: wmiScanning ? 'spin 1.2s linear infinite' : 'none' }} />
-          {wmiScanning ? 'Escaneando PCs...' : 'Atualizar PCs'}
-        </button>
+        <div className="store-header-actions">
+          <div className="store-navigation" aria-label="Navegação entre lojas">
+            <button
+              className="store-nav-button"
+              type="button"
+              onClick={() => navegarParaLoja(lojaAnterior)}
+              disabled={!lojaAnterior}
+              aria-label={lojaAnterior ? `Ir para a loja ${lojaAnterior.id}` : 'Não há loja anterior'}
+              title={lojaAnterior ? `Loja anterior: ${lojaAnterior.id}` : 'Não há loja anterior'}
+            >
+              <ChevronLeft size={19} strokeWidth={2.5} />
+            </button>
+            <span className="store-navigation-label">Navegar</span>
+            <button
+              className="store-nav-button"
+              type="button"
+              onClick={() => navegarParaLoja(proximaLoja)}
+              disabled={!proximaLoja}
+              aria-label={proximaLoja ? `Ir para a loja ${proximaLoja.id}` : 'Não há próxima loja'}
+              title={proximaLoja ? `Próxima loja: ${proximaLoja.id}` : 'Não há próxima loja'}
+            >
+              <ChevronRight size={19} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Botão de atualização manual + indicador de scan automático */}
+          <button
+            className="store-refresh-button"
+            onClick={handleWmiScan}
+            disabled={wmiScanning}
+          >
+            <RefreshCw size={14} style={{ animation: wmiScanning ? 'spin 1.2s linear infinite' : 'none' }} />
+            {wmiScanning ? 'Escaneando PCs...' : 'Atualizar PCs'}
+          </button>
+        </div>
       </div>
 
       {/* ── Ações (Scripts) ── */}
@@ -514,11 +559,24 @@ export default function StoreMonitor() {
           🔒 Modo Leitura: Execuções de scripts no banco de dados estão restritas a TI e Suporte N2.
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          {scripts.map(s => (
-            <button key={s.id} className="btn" onClick={() => abrirModal(s)}>
-              <Play size={18} /> {s.nome}
-            </button>
+        <div className="store-script-groups">
+          {Object.entries(scripts.reduce((grupos, script) => {
+            const nomeGrupo = script.grupo || 'Sem grupo';
+            (grupos[nomeGrupo] ||= []).push(script);
+            return grupos;
+          }, {})).map(([nomeGrupo, scriptsDoGrupo]) => (
+            <section className="store-script-group" key={nomeGrupo}>
+              <button type="button" className="script-group-header" onClick={() => setGruposAbertos(prev => ({ ...prev, [nomeGrupo]: !prev[nomeGrupo] }))}>
+                <span>{gruposAbertos[nomeGrupo] ? '▾' : '▸'} {nomeGrupo}</span><span>{scriptsDoGrupo.length}</span>
+              </button>
+              {gruposAbertos[nomeGrupo] && <div className="store-script-buttons">
+                {scriptsDoGrupo.map(s => (
+                  <button key={s.id} className="btn" onClick={() => abrirModal(s)}>
+                    <Play size={18} /> {s.nome}
+                  </button>
+                ))}
+              </div>}
+            </section>
           ))}
           {scripts.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Nenhum script publicado pelo Admin.</span>}
         </div>
@@ -645,9 +703,9 @@ export default function StoreMonitor() {
                     width: '100%', 
                     padding: '10px', 
                     marginTop: '5px', 
-                    background: 'rgba(0,0,0,0.3)', 
-                    color: scriptSelecionado?.alvo_fixo ? '#94a3b8' : 'white', 
-                    border: '1px solid rgba(255,255,255,0.2)', 
+                    background: 'var(--input-bg)',
+                    color: scriptSelecionado?.alvo_fixo ? 'var(--text-muted)' : 'var(--input-text)',
+                    border: '1px solid var(--border)',
                     borderRadius: '6px',
                     cursor: scriptSelecionado?.alvo_fixo ? 'not-allowed' : 'pointer'
                   }}
@@ -674,7 +732,7 @@ export default function StoreMonitor() {
               {alvo === 'PDV_ESPECIFICO' && (
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label>Número do Caixa</label>
-                  <input type="number" required value={caixaId} onChange={e => setCaixaId(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', background: 'rgba(0,0,0,0.3)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px' }} placeholder="Ex: 1" />
+                  <input type="number" required value={caixaId} onChange={e => setCaixaId(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', background: 'var(--input-bg)', color: 'var(--input-text)', border: '1px solid var(--border)', borderRadius: '6px' }} placeholder="Ex: 1" />
                 </div>
               )}
 

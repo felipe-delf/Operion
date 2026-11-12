@@ -9,11 +9,17 @@ export default function AdminScripts() {
   
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [grupo, setGrupo] = useState('Sem grupo');
+  const [novoGrupo, setNovoGrupo] = useState('');
+  const [gruposAbertos, setGruposAbertos] = useState({});
   const [sqlServidor, setSqlServidor] = useState('');
   const [sqlPdv, setSqlPdv] = useState('');
   const [exigeCaixa, setExigeCaixa] = useState(false);
   const [alvoFixo, setAlvoFixo] = useState('');
   const [publicado, setPublicado] = useState(true);
+  const [confirmacaoAberta, setConfirmacaoAberta] = useState(false);
+  const [confirmacaoTexto, setConfirmacaoTexto] = useState('');
+  const [avisosSql, setAvisosSql] = useState([]);
   const navigate = useNavigate();
 
   const loadScripts = () => {
@@ -47,13 +53,15 @@ export default function AdminScripts() {
 
   const resetForm = () => {
     setEditandoId(null);
-    setNome(''); setDescricao(''); setSqlServidor(''); setSqlPdv(''); setExigeCaixa(false); setAlvoFixo(''); setPublicado(true);
+    setNome(''); setDescricao(''); setGrupo('Sem grupo'); setNovoGrupo(''); setSqlServidor(''); setSqlPdv(''); setExigeCaixa(false); setAlvoFixo(''); setPublicado(true);
   };
 
   const handleEditClick = (script) => {
     setEditandoId(script.id);
     setNome(script.nome);
     setDescricao(script.descricao || '');
+    setGrupo(script.grupo || 'Sem grupo');
+    setNovoGrupo('');
     setSqlServidor(script.sql_servidor || '');
     setSqlPdv(script.sql_pdv || '');
     setExigeCaixa(script.parametros_exigidos?.includes('caixa'));
@@ -78,36 +86,69 @@ export default function AdminScripts() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem('token');
-    const parametros_exigidos = exigeCaixa ? ["caixa"] : [];
+  const analisarSql = (sql, banco) => {
+    const normalizado = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    if (!normalizado) return [];
 
+    const comandos = normalizado.split(';').map(comando => comando.trim()).filter(Boolean);
+    const avisos = [];
+    comandos.forEach((comando, index) => {
+      const inicio = comando.match(/^\s*(UPDATE|DELETE)\b/i)?.[1]?.toUpperCase();
+      if (!inicio) return;
+      if (!/\bWHERE\b/i.test(comando)) {
+        avisos.push(`${banco}: ${inicio} sem WHERE no comando ${index + 1}. Isso pode alterar ou excluir todos os registros.`);
+      } else if (/\bWHERE\s*;?\s*$/i.test(comando) || /\bWHERE\s+(AND|OR)\b/i.test(comando)) {
+        avisos.push(`${banco}: ${inicio} com condição WHERE aparentemente incompleta no comando ${index + 1}.`);
+      }
+    });
+    return avisos;
+  };
+
+  const obterAvisosSql = () => [
+    ...analisarSql(sqlServidor, 'Banco da Loja'),
+    ...analisarSql(sqlPdv, 'Banco do PDV'),
+  ];
+
+  // Analisa o conteúdo enquanto o usuário digita, sem esperar o envio do formulário.
+  // O aviso aparece assim que o comando já permite identificar o risco.
+  useEffect(() => {
+    setAvisosSql(obterAvisosSql());
+  }, [sqlServidor, sqlPdv]);
+
+  const gruposExistentes = [...new Set(scripts.map(script => script.grupo).filter(grupoNome => grupoNome && grupoNome !== 'Sem grupo'))].sort((a, b) => a.localeCompare(b));
+
+  const publicarScript = async () => {
+    const token = localStorage.getItem('token');
+    const grupoSelecionado = grupo === '__novo__' ? novoGrupo.trim() : grupo.trim();
+    const parametros_exigidos = exigeCaixa ? ["caixa"] : [];
     const url = editandoId ? `${API}/api/scripts/${editandoId}` : `${API}/api/scripts/`;
     const method = editandoId ? 'PUT' : 'POST';
-
     const res = await fetch(url, {
-      method: method,
+      method,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({
-        nome,
-        descricao,
-        sql_servidor: sqlServidor,
-        sql_pdv: sqlPdv,
-        parametros_exigidos,
-        publicado,
-        alvo_fixo: alvoFixo || null
-      })
+      body: JSON.stringify({ nome, descricao, grupo: grupoSelecionado || 'Sem grupo', sql_servidor: sqlServidor, sql_pdv: sqlPdv, parametros_exigidos, publicado, alvo_fixo: alvoFixo || null })
     });
-
     if (res.ok) {
       alert(editandoId ? "Script atualizado!" : "Script salvo no cofre com sucesso!");
+      setConfirmacaoAberta(false);
+      setConfirmacaoTexto('');
       resetForm();
       loadScripts();
     } else {
       const data = await res.json();
       alert("Erro: " + data.detail);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const avisos = obterAvisosSql();
+    setAvisosSql(avisos);
+    if (avisos.length > 0) {
+      setConfirmacaoAberta(true);
+      return;
+    }
+    await publicarScript();
   };
 
   return (
@@ -133,6 +174,17 @@ export default function AdminScripts() {
               <label>Descrição Opcional</label>
               <input type="text" value={descricao} onChange={e => setDescricao(e.target.value)} className="form-input" style={{ marginTop: "5px" }} />
             </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label>Grupo do script</label>
+              <select value={grupo} onChange={e => setGrupo(e.target.value)} className="form-select" style={{ marginTop: "5px" }}>
+                <option value="Sem grupo">Sem grupo</option>
+                {gruposExistentes.map(nomeGrupo => <option key={nomeGrupo} value={nomeGrupo}>{nomeGrupo}</option>)}
+                <option value="__novo__">+ Criar novo grupo</option>
+              </select>
+              {grupo === '__novo__' && (
+                <input type="text" value={novoGrupo} onChange={e => setNovoGrupo(e.target.value)} className="form-input" style={{ marginTop: "8px" }} placeholder="Nome do novo grupo" autoFocus required />
+              )}
+            </div>
             
             <div 
               style={{ marginBottom: '1rem', display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '6px', cursor: 'help' }}
@@ -150,7 +202,7 @@ export default function AdminScripts() {
                 <Server size={16} /> SQL do Banco da Loja
                 <HelpCircle 
                   size={14} 
-                  title="O QUE FAZ: Código SQL que será executado no banco de dados do Servidor da Loja (RETAGUARDA).&#13;&#13;QUANDO UTILIZAR: Sempre que precisar alterar tabelas da Retaguarda, tabelas de controle de filiais ou realizar SELECTs/UPDATEs gerais no servidor principal da loja." 
+                  title="O QUE FAZ: Código SQL que será executado no banco de dados do Servidor central da loja.&#13;&#13;QUANDO UTILIZAR: Sempre que precisar alterar tabelas do banco central, tabelas de controle de filiais ou realizar SELECTs/UPDATEs gerais no servidor principal da loja."
                   style={{ cursor: 'help', color: 'var(--text-muted)' }} 
                 />
               </label>
@@ -169,6 +221,14 @@ export default function AdminScripts() {
               <textarea value={sqlPdv} onChange={e => setSqlPdv(e.target.value)} rows="5" placeholder="USE PDV; ..." className="form-input" style={{ marginTop: "5px", fontFamily: "monospace", minHeight: "120px" }}></textarea>
             </div>
 
+            {avisosSql.length > 0 && (
+              <div className="sql-warning" role="alert">
+                <strong>Revisão de segurança necessária</strong>
+                {avisosSql.map(aviso => <div key={aviso}>{aviso}</div>)}
+                <small>Revise o comando antes de publicar. A confirmação será solicitada ao salvar.</small>
+              </div>
+            )}
+
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px' }}>
                 Travar Alvo de Execução (Opcional)
@@ -180,10 +240,9 @@ export default function AdminScripts() {
               </label>
               <select value={alvoFixo} onChange={e => setAlvoFixo(e.target.value)} className="form-select">
                 <option value="" title="O QUE FAZ: Permite que o operador escolha livremente onde rodar.&#13;&#13;QUANDO UTILIZAR: Use para scripts muito genéricos ou que possam se aplicar a qualquer cenário conforme a necessidade do suporte.">Deixar usuário escolher no momento da execução</option>
-                <option value="AMBOS" title="O QUE FAZ: Trava a execução para rodar simultaneamente no Servidor e em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts globais de parametrização completa da filial.">Todos os Servidores e Todos os Caixas</option>
-                <option value="TODOS_PDVS" title="O QUE FAZ: Trava a execução para rodar em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts de alteração em massa nos PDVs (ex: alteração de configuração de cupom ou carga de dados em todos os caixas).">Apenas Todos os Caixas</option>
-                <option value="SERVIDOR" title="O QUE FAZ: Trava a execução para rodar apenas no banco RETAGUARDA do Servidor.&#13;&#13;QUANDO UTILIZAR: Use para scripts que afetam apenas tabelas da retaguarda local da filial (ex: ajustes de cargas, integrações locais).">Apenas os Servidores (LOJA)</option>
-                <option value="SERVIDOR_PDV" title="O QUE FAZ: Trava a execução para rodar no banco do PDV localizado dentro do servidor da loja.&#13;&#13;QUANDO UTILIZAR: Use quando a base do PDV centralizada no servidor precisar sofrer alterações.">Servidores (PDV)</option>
+                <option value="AMBOS" title="O QUE FAZ: Trava a execução para rodar simultaneamente no Servidor e em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts globais de parametrização completa da filial.">Servidor e Todos os Caixas</option>
+                <option value="TODOS_PDVS" title="O QUE FAZ: Trava a execução para rodar em todos os caixas da loja.&#13;&#13;QUANDO UTILIZAR: Use para scripts de alteração em massa nos PDVs (ex: alteração de configuração de cupom ou carga de dados em todos os caixas)."> Todos os Caixas</option>
+                <option value="SERVIDOR" title="O QUE FAZ: Trava a execução para rodar apenas no banco central do Servidor.&#13;&#13;QUANDO UTILIZAR: Use para scripts que afetam apenas tabelas da retaguarda local da filial (ex: ajustes de cargas, integrações locais).">Apenas o Servidor (LOJA)</option>
                 <option value="PDV_ESPECIFICO" title="O QUE FAZ: Trava a execução para rodar em apenas um caixa específico digitado pelo operador.&#13;&#13;QUANDO UTILIZAR: Use para correções pontuais de erros ou falhas locais em um terminal específico da loja.">Apenas um Caixa Específico</option>
               </select>
             </div>
@@ -218,8 +277,17 @@ export default function AdminScripts() {
             <CheckSquare size={20} /> Scripts Cadastrados
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {scripts.map(s => (
-              <div key={s.id} style={{ background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            {Object.entries(scripts.reduce((grupos, script) => {
+              const nomeGrupo = script.grupo || 'Sem grupo';
+              (grupos[nomeGrupo] ||= []).push(script);
+              return grupos;
+            }, {})).map(([nomeGrupo, scriptsDoGrupo]) => (
+              <div key={nomeGrupo} className="script-group">
+                <button type="button" className="script-group-header" onClick={() => setGruposAbertos(prev => ({ ...prev, [nomeGrupo]: !prev[nomeGrupo] }))}>
+                  <span>{gruposAbertos[nomeGrupo] ? '▾' : '▸'} {nomeGrupo}</span><span>{scriptsDoGrupo.length}</span>
+                </button>
+                {gruposAbertos[nomeGrupo] && scriptsDoGrupo.map(s => (
+              <div key={s.id} style={{ background: 'var(--surface-elevated)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{s.nome}</h4>
@@ -242,10 +310,10 @@ export default function AdminScripts() {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '5px' }}>
-                    <button onClick={() => handleEditClick(s)} style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '5px' }} title="Editar">
+                    <button type="button" onClick={() => handleEditClick(s)} style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '5px' }} title="Editar">
                       <Pencil size={18} />
                     </button>
-                    <button onClick={() => handleDelete(s.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }} title="Excluir">
+                    <button type="button" onClick={() => handleDelete(s.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }} title="Excluir">
                       <Trash2 size={18} />
                     </button>
                   </div>
@@ -282,11 +350,29 @@ export default function AdminScripts() {
                   )}
                 </div>
               </div>
+                ))}
+              </div>
             ))}
             {scripts.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Nenhum script cadastrado ainda.</p>}
           </div>
         </div>
       </div>
+
+      {confirmacaoAberta && (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmacao-sql-titulo">
+          <div className="confirm-dialog">
+            <h3 id="confirmacao-sql-titulo">Atenção: SQL potencialmente perigoso</h3>
+            <p>Encontramos comandos que podem alterar muitos registros:</p>
+            <ul>{avisosSql.map(aviso => <li key={aviso}>{aviso}</li>)}</ul>
+            <p>Para publicar mesmo assim, digite <strong>SIM</strong>.</p>
+            <input className="form-input" value={confirmacaoTexto} onChange={e => setConfirmacaoTexto(e.target.value)} autoFocus placeholder="Digite SIM" />
+            <div className="confirm-actions">
+              <button type="button" className="btn secondary-btn" onClick={() => { setConfirmacaoAberta(false); setConfirmacaoTexto(''); }}>Cancelar</button>
+              <button type="button" className="btn danger-btn" disabled={confirmacaoTexto.trim().toUpperCase() !== 'SIM'} onClick={publicarScript}>Publicar mesmo assim</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
