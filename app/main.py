@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import create_tables, SessionLocal
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, verify_password
 
 from app.models.user import UserModel
 from app.models.user_group import UserGroupModel # Garante criação da tabela de grupos
@@ -74,18 +74,11 @@ try:
             db.refresh(administradores)
 
     # Grupos abaixo: criados apenas 1 vez. Edição posterior é livre pelo frontend.
-    promofarma = seed_grupo(
-        nome="Promofarma",
-        descricao="Organização Farmacêutica Nakano / Promofarma (Raiz Corporativa)",
-        permissoes="VER_DASHBOARD",
-        parent_id=None
-    )
-
     ti = seed_grupo(
         nome="TI",
-        descricao="Diretoria de Tecnologia, Sistemas e Segurança",
+        descricao="Tecnologia, sistemas e segurança",
         permissoes="VER_DASHBOARD,EXECUTAR_SCRIPT",
-        parent_id=promofarma.id
+        parent_id=None
     )
 
     desenvolvimento = seed_grupo(
@@ -148,17 +141,26 @@ try:
     ).first()
 
 
+    admin_padrao = db.query(UserModel).filter(UserModel.email == "admin@empresa.com").first()
+
+    # O administrador padrão deve trocar a senha inicial antes do primeiro acesso.
+    # Essa verificação ocorre mesmo quando já existe outro administrador ativo,
+    # pois o banco pode ter sido criado por uma versão anterior do sistema.
+    if admin_padrao and verify_password("Admin@123", admin_padrao.senha_hash):
+        admin_padrao.exige_troca_senha = True
+        db.commit()
+
     if not admin_ativo:
         print("[AVISO] [ADMIN FAILSAFE] Nenhum administrador ativo encontrado no banco! Criando/Reativando o super admin padrão...")
-        admin_padrao = db.query(UserModel).filter(UserModel.email == "admin@empresa.com").first()
         if admin_padrao:
             # Reativa e reseta as credenciais do admin padrão
             admin_padrao.role = "Admin"
             admin_padrao.grupo_id = grupo_ti_id
             admin_padrao.ativo = True
-            admin_padrao.senha_hash = get_password_hash("Admin@123")
-            admin_padrao.exige_troca_senha = False
-            print("[AVISO] [ADMIN FAILSAFE] Administrador padrão 'admin@empresa.com' reativado com a senha padrão 'Admin@123' e grupo Administradores.")
+            # Se o usuário ainda utiliza a senha inicial, obriga a troca no próximo login.
+            if verify_password("Admin@123", admin_padrao.senha_hash):
+                admin_padrao.exige_troca_senha = True
+            print("[AVISO] [ADMIN FAILSAFE] Administrador padrão 'admin@empresa.com' reativado. A senha inicial deverá ser alterada no primeiro acesso.")
         else:
             # Cria o admin padrão do zero
             admin_padrao = UserModel(
@@ -167,10 +169,10 @@ try:
                 role="Admin",
                 grupo_id=grupo_ti_id,
                 ativo=True,
-                exige_troca_senha=False
+                exige_troca_senha=True
             )
             db.add(admin_padrao)
-            print("[AVISO] [ADMIN FAILSAFE] Administrador padrão 'admin@empresa.com' criado do zero com a senha padrão 'Admin@123' e grupo Administradores.")
+            print("[AVISO] [ADMIN FAILSAFE] Administrador padrão 'admin@empresa.com' criado. A senha inicial deverá ser alterada no primeiro acesso.")
         db.commit()
 
 except Exception as e:

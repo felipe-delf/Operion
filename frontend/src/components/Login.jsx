@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, ShieldCheck, Mail } from 'lucide-react';
 import { API } from '../config';
@@ -9,9 +9,14 @@ export default function Login() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
+  const [retryAfter, setRetryAfter] = useState(() => {
+    const bloqueioAte = Number(localStorage.getItem('login_block_until') || 0);
+    return Math.max(0, Math.ceil((bloqueioAte - Date.now()) / 1000));
+  });
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading || retryAfter > 0) return;
     setErro('');
     setLoading(true);
 
@@ -31,10 +36,16 @@ export default function Login() {
           localStorage.setItem('token', data.access_token);
           localStorage.setItem('role', data.role);
           localStorage.setItem('permissions', data.permissions || '');
+          localStorage.removeItem('login_block_until');
           navigate('/dashboard');
         }
+      } else if (res.status === 429 || res.headers.get('Retry-After')) {
+        const seconds = Number(res.headers.get('Retry-After')) || data.retry_after || 180;
+        setRetryAfter(seconds);
+        localStorage.setItem('login_block_until', String(Date.now() + (seconds * 1000)));
+        setErro(data.detail || 'Muitas tentativas. Aguarde antes de tentar novamente.');
       } else {
-        setErro(data.detail || 'Falha ao realizar login');
+        setErro('Não foi possível autenticar. Verifique suas credenciais.');
       }
     } catch (error) {
       setErro('Erro de conexão com o servidor');
@@ -43,16 +54,26 @@ export default function Login() {
     }
   };
 
-  return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <form onSubmit={handleLogin} className="glass-panel" style={{ padding: '3rem', width: '400px' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
-          <ShieldCheck size={64} color="#818cf8" />
-        </div>
-        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>Operion</h2>
-        <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginBottom: '2rem' }}>Acesso Restrito</p>
+  useEffect(() => {
+    if (retryAfter <= 0) {
+      localStorage.removeItem('login_block_until');
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      const bloqueioAte = Number(localStorage.getItem('login_block_until') || 0);
+      setRetryAfter(Math.max(0, Math.ceil((bloqueioAte - Date.now()) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [retryAfter]);
 
-        {erro && <div style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>{erro}</div>}
+  return (
+    <div className="login-shell">
+      <form onSubmit={handleLogin} className="login-card">
+        <div className="login-brand"><ShieldCheck size={22} /> <span>Operion</span></div>
+        <h2>Entrar no Operion</h2>
+        <p className="login-subtitle">Acesse sua conta corporativa</p>
+
+        {erro && <div className="login-error" role="alert">{erro}{retryAfter > 0 && ` (${retryAfter}s)`}</div>}
 
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>E-mail</label>
@@ -62,7 +83,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white' }}
+              className="form-input login-input"
               placeholder="seu@email.com"
               required
             />
@@ -75,14 +96,14 @@ export default function Login() {
             type="password"
             value={senha}
             onChange={e => setSenha(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white' }}
+            className="form-input login-input"
             required
           />
         </div>
 
-        <button type="submit" className="btn" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
+        <button type="submit" className="btn login-submit" disabled={loading || retryAfter > 0}>
           <KeyRound size={18} />
-          {loading ? 'Validando...' : 'Acessar Painel'}
+          {loading ? 'Validando...' : retryAfter > 0 ? 'Aguarde...' : 'Entrar'}
         </button>
       </form>
     </div>

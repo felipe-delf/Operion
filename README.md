@@ -51,9 +51,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES=600
 # Banco de Dados Local
 DATABASE_URL=sqlite:///./parametrizacao.db
 
-# Retaguarda (banco central da sua rede)
-RETAGUARDA_IP=IP_DO_SERVIDOR_RETAGUARDA
-RETAGUARDA_DB=NOME_DO_BANCO_RETAGUARDA
+# Banco central da sua rede
+RETAGUARDA_IP=IP_DO_SERVIDOR_CENTRAL
+RETAGUARDA_DB=NOME_DO_BANCO_CENTRAL
 RETAGUARDA_USER=usuario_sql
 RETAGUARDA_PWD=senha_sql
 
@@ -63,6 +63,25 @@ LOJAS_PWD=sua_senha_lojas
 ```
 
 ### 2. Rodar com Docker (Recomendado para Produção)
+
+O banco de usuários, scripts e logs continua em `./parametrizacao.db`, no mesmo caminho usado pelo servidor atual. O arquivo é montado como volume persistente e não deve ser commitado no Git.
+
+Antes de atualizar o projeto, faça um backup:
+
+```bash
+mkdir -p backups
+timestamp=$(date +%Y%m%d-%H%M%S)
+cp parametrizacao.db backups/parametrizacao-$timestamp.db
+```
+
+Depois atualize somente o código e recrie o container:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+A inicialização cria apenas tabelas/colunas ausentes e aplica migrações aditivas. Ela não apaga usuários, scripts, grupos, auditoria ou logs.
 
 ```bash
 docker-compose up -d --build

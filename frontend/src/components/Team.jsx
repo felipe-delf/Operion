@@ -61,13 +61,13 @@ function TreeNode({
           justifyContent: 'space-between',
           padding: '10px 14px',
           background: isDropTarget
-            ? 'rgba(139, 92, 246, 0.25)'
+            ? 'color-mix(in srgb, #8b5cf6 16%, var(--group-bg))'
             : isDragged && isActiveDrag
-            ? 'rgba(30, 41, 59, 0.15)'
-            : 'rgba(30, 41, 59, 0.4)',
+            ? 'var(--surface-elevated)'
+            : 'var(--group-bg)',
           border: isDropTarget
             ? '2px dashed #8b5cf6'
-            : '1px solid rgba(255, 255, 255, 0.07)',
+            : '1px solid var(--group-border)',
           borderRadius: '10px',
           marginTop: '8px',
           transition: 'background 0.15s ease, border 0.15s ease, opacity 0.15s ease',
@@ -79,13 +79,13 @@ function TreeNode({
       >
         {/* Lado Esquerdo — pointerEvents:none para não bloquear hit-test */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0, pointerEvents: 'none' }}>
-          {!isProtected && <GripVertical size={14} style={{ color: '#475569', flexShrink: 0 }} />}
+          {!isProtected && <GripVertical size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
           {hasChildren ? (
             <button
               type="button"
               onPointerDown={e => e.stopPropagation()}
               onClick={() => toggleNodeCollapse(node.id)}
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px', pointerEvents: 'all' }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px', pointerEvents: 'all' }}
             >
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
             </button>
@@ -96,7 +96,7 @@ function TreeNode({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: cs.text }}>{node.nome}</span>
             {node.descricao && (
-              <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }} title={node.descricao}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }} title={node.descricao}>
                 • {node.descricao}
               </span>
             )}
@@ -135,7 +135,7 @@ function TreeNode({
 
       {/* Filhos */}
       {hasChildren && !isCollapsed && (
-        <div style={{ borderLeft: '1px dotted rgba(255,255,255,0.12)', marginLeft: '24px', paddingLeft: '16px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ borderLeft: '1px solid var(--group-line)', marginLeft: '24px', paddingLeft: '16px', display: 'flex', flexDirection: 'column' }}>
           {node.children.map(child => (
             <TreeNode
               key={child.id}
@@ -525,8 +525,8 @@ export default function Team() {
 
   const inputStyle = {
     width: '100%', padding: '10px 12px', marginTop: '6px', borderRadius: '8px',
-    background: 'rgba(0,0,0,0.3)', color: 'white',
-    border: '1px solid rgba(255,255,255,0.15)', outline: 'none', boxSizing: 'border-box', fontSize: '13px',
+    background: 'var(--input-bg)', color: 'var(--input-text)',
+    border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box', fontSize: '13px',
   };
 
   const treeRoots    = buildGroupTree(grupos);
@@ -566,12 +566,12 @@ export default function Team() {
 
       {/* ══ SEÇÃO 1: MEMBROS ══════════════════════════════════════════════════ */}
       <div style={{ marginBottom: '4rem' }}>
-        <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem', marginBottom: '1.5rem', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', fontWeight: 600 }}>
+        <h3 className="team-section-title" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.5rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', fontWeight: 600 }}>
           <Users size={20} /> Membros da Equipe
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
           <div className="glass-panel" style={{ padding: '2rem', height: 'fit-content' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem', color: '#cbd5e1' }}>
+            <h4 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem', color: 'var(--text-main)' }}>
               <UserPlus size={18} color="#818cf8" /> Novo Membro
             </h4>
             <form onSubmit={handleCreateUser}>
@@ -586,8 +586,8 @@ export default function Team() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ fontSize: '13px', fontWeight: 500 }}>Grupo de Permissão</label>
                 <select value={grupoIdSelecionado} onChange={e => setGrupoIdSelecionado(e.target.value)} style={inputStyle}>
-                  {grupos.map(g => <option key={g.id} value={g.id} style={{ background: '#1e293b', color: 'white' }}>{g.nome}</option>)}
-                  {grupos.length === 0 && <option value="" disabled style={{ background: '#1e293b', color: 'white' }}>Nenhum grupo carregado</option>}
+                  {grupos.map(g => <option key={g.id} value={g.id} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>{g.nome}</option>)}
+                  {grupos.length === 0 && <option value="" disabled style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>Nenhum grupo carregado</option>}
                 </select>
               </div>
               <button className="btn" type="submit" style={{ width: '100%', justifyContent: 'center' }}>Cadastrar Usuário</button>
@@ -595,11 +595,11 @@ export default function Team() {
           </div>
 
           <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '1.25rem', fontSize: '1rem', color: '#cbd5e1' }}>Membros Cadastrados</h4>
+            <h4 style={{ marginTop: 0, marginBottom: '1.25rem', fontSize: '1rem', color: 'var(--text-main)' }}>Membros Cadastrados</h4>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+              <table className="team-table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#64748b', fontSize: '13px' }}>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '13px' }}>
                     <th style={{ padding: '12px 10px' }}>Membro</th>
                     <th style={{ padding: '12px 10px' }}>Grupo / Perfil</th>
                     <th style={{ padding: '12px 10px' }}>Status</th>
@@ -614,7 +614,7 @@ export default function Team() {
                     return (
                       <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', opacity: u.ativo ? 1 : 0.5 }}>
                         <td style={{ padding: '14px 10px', verticalAlign: 'middle' }}>
-                          <span style={{ fontWeight: 500, color: u.ativo ? 'white' : '#94a3b8' }}>{u.email}</span>
+                          <span style={{ fontWeight: 500, color: u.ativo ? 'var(--text-main)' : 'var(--text-muted)' }}>{u.email}</span>
                         </td>
                         <td style={{ padding: '14px 10px', verticalAlign: 'middle' }}>
                           <span style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`, padding: '3px 10px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>{gNome}</span>
@@ -645,14 +645,14 @@ export default function Team() {
 
       {/* ══ SEÇÃO 2: RBAC ═════════════════════════════════════════════════════ */}
       <div style={{ marginBottom: '3rem' }}>
-        <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem', marginBottom: '1.5rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', fontWeight: 600 }}>
+        <h3 className="team-rbac-title" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.5rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', fontWeight: 600 }}>
           <ShieldCheck size={20} color="#10b981" /> Grupos de Acesso (RBAC)
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '2rem' }}>
           {/* Formulário Novo Grupo */}
           <div className="glass-panel" style={{ padding: '2rem', height: 'fit-content' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem', color: '#cbd5e1' }}>
+            <h4 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem', color: 'var(--text-main)' }}>
               <FolderPlus size={18} color="#10b981" /> Novo Grupo
             </h4>
             <form onSubmit={handleCreateGroup}>
@@ -667,13 +667,13 @@ export default function Team() {
               <div style={{ marginBottom: '1.2rem' }}>
                 <label style={{ fontSize: '13px', fontWeight: 500 }}>Grupo Superior / Pai (Opcional)</label>
                 <select value={novoGrupoParentId} onChange={e => setNovoGrupoParentId(e.target.value)} style={inputStyle}>
-                  <option value="" style={{ background: '#1e293b', color: '#94a3b8' }}>-- Nenhum (Grupo Raiz) --</option>
-                  {grupos.map(g => <option key={g.id} value={g.id} style={{ background: '#1e293b', color: 'white' }}>{g.nome}</option>)}
+                  <option value="" style={{ background: '#1e293b', color: 'var(--text-muted)' }}>-- Nenhum (Grupo Raiz) --</option>
+                  {grupos.map(g => <option key={g.id} value={g.id} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>{g.nome}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Chaves de Acesso</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', background: 'var(--surface-elevated)', padding: '10px', borderRadius: '6px' }}>
                   {SISTEM_PERMISSIONS.map(p => {
                     const herdada = obterPermissoesHerdadas(novoGrupoParentId).includes(p.key);
                     const marcada = herdada || novoGrupoPermissoes.includes(p.key);
@@ -688,7 +688,7 @@ export default function Team() {
                           style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer' }}
                         />
                         <label htmlFor={`new_g_${p.key}`} style={{ cursor: 'pointer', fontSize: '12px' }}>
-                          <strong style={{ display: 'block', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <strong style={{ display: 'block', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {p.label}
                             {herdada && (
                               <span style={{ fontSize: '9px', background: 'rgba(139, 92, 246, 0.25)', color: '#c084fc', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
@@ -696,7 +696,7 @@ export default function Team() {
                               </span>
                             )}
                           </strong>
-                          <span style={{ fontSize: '10px', color: '#94a3b8' }}>{p.desc}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{p.desc}</span>
                         </label>
                       </div>
                     );
@@ -708,11 +708,11 @@ export default function Team() {
           </div>
 
           {/* Árvore */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem', color: '#cbd5e1' }}>
+          <div className="glass-panel group-tree-panel" style={{ padding: '2rem' }}>
+            <h4 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem', color: 'var(--text-main)' }}>
               Hierarquia de Grupos de Acesso
             </h4>
-            <p style={{ fontSize: '12px', color: '#475569', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <GripVertical size={12} /> Segure e arraste um grupo para reorganizar a hierarquia
             </p>
 
@@ -721,10 +721,10 @@ export default function Team() {
               <div
                 data-group-id="root"
                 style={{
-                  border: `2px dashed ${dragVisual?.dropTargetId === -1 ? '#8b5cf6' : 'rgba(255,255,255,0.2)'}`,
-                  background: dragVisual?.dropTargetId === -1 ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                  border: `2px dashed ${dragVisual?.dropTargetId === -1 ? '#8b5cf6' : 'var(--group-border)'}`,
+                  background: dragVisual?.dropTargetId === -1 ? 'color-mix(in srgb, #8b5cf6 10%, var(--group-bg))' : 'transparent',
                   borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '12px',
-                  color: dragVisual?.dropTargetId === -1 ? '#c084fc' : '#475569',
+                  color: dragVisual?.dropTargetId === -1 ? '#8b5cf6' : 'var(--text-muted)',
                   marginBottom: '12px', transition: 'all 0.15s ease', pointerEvents: 'auto',
                 }}
               >
@@ -733,7 +733,7 @@ export default function Team() {
             )}
 
             {grupos.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '13px' }}>
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '13px' }}>
                 Nenhum grupo criado ainda. Crie o primeiro grupo ao lado.
               </div>
             ) : (
@@ -763,12 +763,12 @@ export default function Team() {
           <div className="glass-panel modal-panel" style={{ padding: '2rem', width: '420px', position: 'relative' }}>
             <button onClick={() => setModalEdicaoAberto(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}><X size={20} /></button>
             <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={18} color="#3b82f6" /> Editar Usuário</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{usuarioSelecionado?.email}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{usuarioSelecionado?.email}</p>
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', fontWeight: 500 }}>Grupo de Acesso</label>
               <select value={edicaoGrupoId} onChange={e => setEdicaoGrupoId(e.target.value)} style={inputStyle}>
-                <option value="" disabled style={{ background: '#1e293b', color: '#94a3b8' }}>-- Selecione --</option>
-                {grupos.map(g => <option key={g.id} value={g.id} style={{ background: '#1e293b', color: 'white' }}>{g.nome}</option>)}
+                <option value="" disabled style={{ background: '#1e293b', color: 'var(--text-muted)' }}>-- Selecione --</option>
+                {grupos.map(g => <option key={g.id} value={g.id} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>{g.nome}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: '2rem' }}>
@@ -804,15 +804,15 @@ export default function Team() {
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ fontSize: '13px', fontWeight: 500 }}>Grupo Superior / Pai</label>
               <select value={grupoParentIdEdicao} onChange={e => setGrupoParentIdEdicao(e.target.value)} style={inputStyle} disabled={grupoSelecionado?.nome === 'Administradores'}>
-                <option value="" style={{ background: '#1e293b', color: '#94a3b8' }}>-- Nenhum (Grupo Raiz) --</option>
+                <option value="" style={{ background: '#1e293b', color: 'var(--text-muted)' }}>-- Nenhum (Grupo Raiz) --</option>
                 {grupos.filter(g => g.id !== grupoSelecionado?.id && !isDescendant(g.id, grupoSelecionado?.id)).map(g => (
-                  <option key={g.id} value={g.id} style={{ background: '#1e293b', color: 'white' }}>{g.nome}</option>
+                  <option key={g.id} value={g.id} style={{ background: 'var(--input-bg)', color: 'var(--input-text)' }}>{g.nome}</option>
                 ))}
               </select>
             </div>
             <div style={{ marginBottom: '1.8rem' }}>
               <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Configurar Permissões</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', background: 'var(--surface-elevated)', padding: '10px', borderRadius: '6px' }}>
                 {SISTEM_PERMISSIONS.map(p => {
                   const herdada = obterPermissoesHerdadas(grupoParentIdEdicao).includes(p.key);
                   const marcada = herdada || permissoesGrupoEdicao.includes(p.key);
@@ -828,7 +828,7 @@ export default function Team() {
                         style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer' }}
                       />
                       <label htmlFor={`edit_g_${p.key}`} style={{ cursor: 'pointer', fontSize: '12px' }}>
-                        <strong style={{ display: 'block', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <strong style={{ display: 'block', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           {p.label}
                           {herdada && (
                             <span style={{ fontSize: '9px', background: 'rgba(139, 92, 246, 0.25)', color: '#c084fc', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
@@ -836,7 +836,7 @@ export default function Team() {
                             </span>
                           )}
                         </strong>
-                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>{p.desc}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{p.desc}</span>
                       </label>
                     </div>
                   );
@@ -854,20 +854,20 @@ export default function Team() {
           <div className="glass-panel modal-panel" style={{ padding: '2rem', width: '450px', position: 'relative' }}>
             <button onClick={() => setModalPermissoesAberto(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}><X size={20} /></button>
             <h3 style={{ marginTop: 0 }}>Permissões de {usuarioSelecionado?.email}</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               Selecione os scripts do cofre que este usuário pode executar nas lojas.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '2rem', maxHeight: '300px', overflowY: 'auto' }}>
               {scriptsPublicados.map(script => (
-                <div key={script.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                <div key={script.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'var(--surface-elevated)', borderRadius: '6px' }}>
                   <input type="checkbox" checked={permissoesAtuais.includes(script.id)} onChange={() => setPermissoesAtuais(prev => prev.includes(script.id) ? prev.filter(id => id !== script.id) : [...prev, script.id])} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
                   <label style={{ fontSize: '13px' }}>
                     <strong style={{ display: 'block', color: 'white' }}>{script.nome}</strong>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>{script.descricao || 'Sem descrição'}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{script.descricao || 'Sem descrição'}</span>
                   </label>
                 </div>
               ))}
-              {scriptsPublicados.length === 0 && <p style={{ color: '#94a3b8' }}>Nenhum script publicado encontrado.</p>}
+              {scriptsPublicados.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Nenhum script publicado encontrado.</p>}
             </div>
             <button className="btn" onClick={salvarPermissoesScripts} style={{ width: '100%', justifyContent: 'center', background: '#10b981' }}>Salvar Permissões de Script</button>
           </div>

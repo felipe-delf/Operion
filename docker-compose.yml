@@ -8,8 +8,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
+      # Mantém compatibilidade com o banco já usado pelo servidor.
       - ./parametrizacao.db:/app/parametrizacao.db
       - ./.env:/app/.env
+      # Backups automáticos ficam fora do container.
+      - ./backups:/app/backups
     restart: always
 
   frontend:

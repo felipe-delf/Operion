@@ -8,7 +8,8 @@ import AdminScripts from './components/AdminScripts';
 import AuditRules from './components/AuditRules';
 import ExecutionLogs from './components/ExecutionLogs';
 import MassExecution from './components/MassExecution';
-import { Shield, Users, LogOut, Code, ShieldCheck, ClipboardList, Radio } from 'lucide-react';
+import { Shield, Users, LogOut, Code, ShieldCheck, ClipboardList, Radio, Sun, Moon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import './index.css';
 
 // ── Interceptador Global de API ──
@@ -54,6 +55,8 @@ function ProtectedRoute({ children, permission }) {
 
 function Navbar() {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem('theme', theme); }, [theme]);
   const role = localStorage.getItem('role') || '';
   const permissions = localStorage.getItem('permissions') || '';
 
@@ -69,7 +72,7 @@ function Navbar() {
   };
 
   const linkStyle = {
-    color: 'white',
+    color: 'var(--text-main)',
     textDecoration: 'none',
     fontWeight: 500,
     display: 'flex',
@@ -129,8 +132,11 @@ function Navbar() {
         </div>
       </div>
 
-      <div>
-        <button className="btn" onClick={handleLogout} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button className="btn" type="button" aria-label="Alternar tema" title="Alternar tema" onClick={() => setTheme(value => value === 'dark' ? 'light' : 'dark')} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-main)', padding: '8px 10px' }}>
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+        <button className="btn" onClick={handleLogout} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
           <LogOut size={16} /> Sair
         </button>
       </div>

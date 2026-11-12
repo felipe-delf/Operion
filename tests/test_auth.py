@@ -4,6 +4,14 @@ Cobre: login, credenciais inválidas, usuário inativo, troca de senha obrigató
 """
 import pytest
 from tests.conftest import auth_headers
+from app.core.rate_limit import reset_login_limits
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limits():
+    reset_login_limits()
+    yield
+    reset_login_limits()
 
 
 class TestLogin:
@@ -57,6 +65,14 @@ class TestLogin:
         })
         assert res.status_code == 401
 
+    def test_login_bloqueia_tentativas_repetidas(self, client, admin_user):
+        for _ in range(5):
+            res = client.post("/api/auth/login", json={"email": "admin@teste.com", "senha": "errada"})
+            assert res.status_code == 401
+        blocked = client.post("/api/auth/login", json={"email": "admin@teste.com", "senha": "Admin@123"})
+        assert blocked.status_code == 429
+        assert "Retry-After" in blocked.headers
+
     def test_login_usuario_inativo_retorna_403(self, client, db_session, admin_group):
         """Usuário inativo deve ser bloqueado com 403."""
         from app.models.user import UserModel
@@ -79,6 +95,25 @@ class TestLogin:
         })
         assert res.status_code == 403
         assert "inativo" in res.json()["detail"].lower()
+
+    def test_admin_padrao_exige_troca_na_primeira_senha(self, client, db_session, admin_group):
+        from app.models.user import UserModel
+        from app.core.security import get_password_hash
+
+        user = UserModel(
+            email="admin-inicial@teste.com",
+            senha_hash=get_password_hash("Admin@123"),
+            role="Admin",
+            grupo_id=admin_group.id,
+            exige_troca_senha=True,
+            ativo=True,
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        res = client.post("/api/auth/login", json={"email": user.email, "senha": "Admin@123"})
+        assert res.status_code == 200
+        assert res.json()["require_password_change"] is True
 
     def test_login_exige_troca_senha(self, client, db_session, admin_group):
         """Usuário com troca de senha obrigatória deve receber flag especial, sem token."""

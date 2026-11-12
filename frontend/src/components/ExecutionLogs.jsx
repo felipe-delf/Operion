@@ -33,6 +33,10 @@ export default function ExecutionLogs() {
   const [filtroScript, setFiltroScript] = useState('');
   const [filtroLoja, setFiltroLoja]     = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const token = localStorage.getItem('token');
   const role  = localStorage.getItem('role');
@@ -47,16 +51,24 @@ export default function ExecutionLogs() {
       return;
     }
     fetchLogs();
-  }, [navigate]);
+  }, [navigate, page, pageSize, busca, filtroScript, filtroLoja, filtroStatus]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [busca, filtroScript, filtroLoja, filtroStatus]);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/execucoes/logs/?limit=500`, {
+      const params = new URLSearchParams({ page, page_size: pageSize, busca, script: filtroScript, loja: filtroLoja, status_final: filtroStatus });
+      const res = await fetch(`${API}/execucoes/logs/?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Acesso negado');
-      setLogs(await res.json());
+      const data = await res.json();
+      setLogs(data.items || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.total_pages || 0);
     } catch (e) {
       console.error(e);
       setLogs([]);
@@ -65,22 +77,10 @@ export default function ExecutionLogs() {
     }
   };
 
-  // Scripts únicos para filtro
   const scriptsUnicos = [...new Set(logs.map(l => l.script_nome).filter(Boolean))].sort();
-  const lojasUnicas   = [...new Set(logs.map(l => l.loja_id).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
-
-  const logsFiltrados = logs.filter(l => {
-    const texto = busca.toLowerCase();
-    const matchBusca = !busca || [
-      l.usuario_email, l.script_nome, l.loja_id, l.alvo, l.job_id
-    ].some(v => v?.toLowerCase().includes(texto));
-    const matchScript = !filtroScript || l.script_nome === filtroScript;
-    const matchLoja   = !filtroLoja   || l.loja_id === filtroLoja;
-    const matchStatus = !filtroStatus || l.status_final === filtroStatus;
-    return matchBusca && matchScript && matchLoja && matchStatus;
-  });
-
-  const limparFiltros = () => { setBusca(''); setFiltroScript(''); setFiltroLoja(''); setFiltroStatus(''); };
+  const lojasUnicas = [...new Set(logs.map(l => l.loja_id).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
+  const logsFiltrados = logs;
+  const limparFiltros = () => { setBusca(''); setFiltroScript(''); setFiltroLoja(''); setFiltroStatus(''); setPage(1); };
   const temFiltro = busca || filtroScript || filtroLoja || filtroStatus;
 
   return (
@@ -94,7 +94,7 @@ export default function ExecutionLogs() {
           <div>
             <h2 style={{ margin: 0 }}>Log de Execuções</h2>
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              🔒 Área restrita — apenas Administradores · {logs.length} registros
+              🔒 Área restrita · {total} registros
             </p>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function ExecutionLogs() {
         </div>
         {temFiltro && (
           <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#818cf8' }}>
-            Mostrando {logsFiltrados.length} de {logs.length} registros
+            Mostrando {total === 0 ? 0 : ((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} de {total} registros
           </p>
         )}
       </div>
@@ -283,6 +283,18 @@ export default function ExecutionLogs() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      {!loading && totalPages > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', margin: '18px 0' }}>
+          <button className="btn" disabled={page <= 1} onClick={() => setPage(1)}>«</button>
+          <button className="btn" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>‹</button>
+          <span style={{ color: 'var(--text-muted)' }}>Página {page} de {totalPages}</span>
+          <button className="btn" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>›</button>
+          <button className="btn" disabled={page >= totalPages} onClick={() => setPage(totalPages)}>»</button>
+          <select className="form-select" value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }} style={{ width: 'auto' }}>
+            <option value="25">25 por página</option><option value="50">50 por página</option><option value="100">100 por página</option>
+          </select>
         </div>
       )}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

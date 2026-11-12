@@ -21,6 +21,7 @@ import app.models.execution_log # noqa: F401 — registra 'execution_logs'
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
+from app.core.rate_limit import reset_login_limits
 from app.models.user import UserModel
 from app.models.user_group import UserGroupModel
 
@@ -64,6 +65,7 @@ def client(db_session):
     Retorna um TestClient da FastAPI com a dependência de banco substituída
     pelo banco de teste em memória.
     """
+    reset_login_limits()
     # Import aqui para evitar que o main.py faça seed no banco de produção
     from app.main import app
 

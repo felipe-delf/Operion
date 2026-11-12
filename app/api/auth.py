@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import UserModel
 from app.models.user_group import UserGroupModel
 from app.schemas.user_schema import LoginRequest, ChangePasswordRequest
 from app.core.security import verify_password, create_access_token, get_password_hash
+from app.core.rate_limit import check_login_allowed, clear_login_failures, register_login_failure
 
 def obter_permissoes_recursivas(grupo, db: Session) -> str:
     if not grupo:
@@ -34,10 +35,24 @@ def obter_permissoes_recursivas(grupo, db: Session) -> str:
 router = APIRouter()
 
 @router.post("/login", tags=["Autenticação"])
-def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.email == req.email).first()
+def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
+    email = req.email.strip().lower()
+    client_ip = request.client.host if request.client else "unknown"
+    retry_after = check_login_allowed(client_ip, email)
+    if retry_after:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas tentativas. Aguarde antes de tentar novamente.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    user = db.query(UserModel).filter(UserModel.email == email).first()
     if not user or not verify_password(req.senha, user.senha_hash):
-        raise HTTPException(status_code=401, detail="E-mail ou senha inválidos")
+        retry_after = register_login_failure(client_ip, email)
+        headers = {"Retry-After": str(retry_after)} if retry_after else None
+        raise HTTPException(status_code=401, detail="E-mail ou senha inválidos", headers=headers)
+
+    clear_login_failures(client_ip, email)
 
     if not user.ativo:
         raise HTTPException(status_code=403, detail="Usuário inativo. Contate o administrador.")

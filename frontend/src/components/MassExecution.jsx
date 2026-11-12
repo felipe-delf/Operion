@@ -275,17 +275,16 @@ export default function MassExecution() {
                 {scriptSelecionado.alvo_fixo ? (
                   <div style={{ padding: '12px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', fontSize: '14px', color: '#818cf8', fontWeight: 500 }}>
                     {scriptSelecionado.alvo_fixo === 'SERVIDOR' && '🔒 Fixado: Apenas no Servidor da Loja (Banco LOJA)'}
-                    {scriptSelecionado.alvo_fixo === 'TODOS_PDVS' && '🔒 Fixado: Apenas em Todos os Caixas de cada loja (Banco PDV)'}
-                    {scriptSelecionado.alvo_fixo === 'SERVIDOR_PDV' && '🔒 Fixado: No Servidor da Loja direcionado ao Banco PDV'}
-                    {scriptSelecionado.alvo_fixo === 'AMBOS' && '🔒 Fixado: Servidores (LOJA) e Todos os Caixas (PDV)'}
-                    {scriptSelecionado.alvo_fixo === 'PDV_ESPECIFICO' && '🔒 Convertido: Rodar em todos os Caixas da loja'}
+                    {scriptSelecionado.alvo_fixo === 'TODOS_PDVS' && '🔒 Fixado: Todos os Caixas da Loja (Banco PDV)'}
+                    {scriptSelecionado.alvo_fixo === 'AMBOS' && '🔒 Fixado: Servidor (LOJA) e Todos os Caixas (PDV)'}
+                    {scriptSelecionado.alvo_fixo === 'PDV_ESPECIFICO' && '🔒 Convertido: Rodar em apenas um Caixa'}
                   </div>
                 ) : (
                   <select value={alvo} onChange={e => setAlvo(e.target.value)} style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.3)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', fontSize: '14px' }}>
-                    <option value="AMBOS">Todos os Servidores e Todos os Caixas</option>
-                    <option value="TODOS_PDVS">Apenas Todos os Caixas</option>
-                    <option value="SERVIDOR">Apenas os Servidores (LOJA)</option>
-                    <option value="SERVIDOR_PDV">Servidores (PDV)</option>
+                    <option value="AMBOS">Servidor e toodos os Caixas</option>
+                    <option value="TODOS_PDVS">Todos os Caixas</option>
+                    <option value="SERVIDOR">Apenas o Servidor (LOJA)</option>
+                    <option value="SERVIDOR_PDV">Apenas um Caixa (PDV)</option>
                   </select>
                 )}
               </div>

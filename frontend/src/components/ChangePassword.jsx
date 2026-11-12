@@ -64,7 +64,7 @@ export default function ChangePassword() {
             type="password" 
             value={senha}
             onChange={e => setSenha(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white' }}
+            className="form-input"
             required
           />
         </div>
@@ -75,7 +75,7 @@ export default function ChangePassword() {
             type="password" 
             value={confirmaSenha}
             onChange={e => setConfirmaSenha(e.target.value)}
-            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white' }}
+            className="form-input"
             required
           />
         </div>
