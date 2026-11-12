@@ -7,7 +7,7 @@ describe('App Component', () => {
   it('renders without crashing', () => {
     render(<App />);
     
-    // Na rota inicial "/", ele renderiza o componente Login.
-    expect(screen.getByText('Acesso Restrito')).toBeInTheDocument();
+    // Na rota inicial "/", ele renderiza o formulário de login.
+    expect(screen.getByText('Entrar no Operion')).toBeInTheDocument();
   });
 });
