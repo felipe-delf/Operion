@@ -59,3 +59,4 @@ Thumbs.db
 
 # Scripts temporários de desenvolvimento
 frontend/src/update_*.py
+requirements-test.txt
