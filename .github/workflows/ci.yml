@@ -39,6 +39,11 @@ jobs:
       - name: Instalar dependências Python
         run: |
           python -m pip install --upgrade pip
+          # Instala o arquivo versionado e garante as ferramentas do CI mesmo
+          # quando o runner reutiliza um cache de dependências antigo.
+          python -m pip install -r requirements.txt
+          python -m pip install pytest httpx pytest-asyncio pytest-cov
+          python -m pip show pytest
           # As dependências de produção e de teste ficam centralizadas neste arquivo.
           python -m pip install -r requirements.txt
 
