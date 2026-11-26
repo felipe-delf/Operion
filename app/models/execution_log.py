@@ -26,7 +26,7 @@ class ExecutionLogModel(Base):
     usuario_id    = Column(Integer, nullable=True)
     usuario_email = Column(String(200), nullable=True)
     usuario_role  = Column(String(50), nullable=True)
-    loja_id       = Column(String(50), nullable=True)
+    loja_id       = Column(Text, nullable=True)
     alvo          = Column(String(50), nullable=True)
     parametros    = Column(JSON, nullable=True)
     job_id        = Column(String(100), nullable=True)

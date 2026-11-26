@@ -35,7 +35,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . .
 
-# Grant ownership of the work directory to the unprivileged user so it can write the SQLite db
+# Grant ownership of the work directory to the unprivileged user
 RUN chown -R appuser:appgroup /app
 
 # Switch to the non-privileged user

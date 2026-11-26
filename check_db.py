@@ -1,17 +1,17 @@
-import sqlite3
+from app.core.database import SessionLocal
+from app.models.user import UserModel
+from app.models.user_group import UserGroupModel
 
-conn = sqlite3.connect('parametrizacao_limpo.db')
-cur = conn.cursor()
+db = SessionLocal()
+try:
+    grupos = db.query(UserGroupModel).order_by(UserGroupModel.id).all()
+    print("Grupos no banco:")
+    for g in grupos:
+        print(f"  {g.nome:25} | parent={g.parent_id} | {g.permissoes}")
 
-cur.execute("SELECT nome, permissoes, parent_id FROM user_grupos ORDER BY id")
-rows = cur.fetchall()
-print('Grupos no banco:')
-for r in rows:
-    print(f'  {r[0]:25} | parent={r[2]} | {r[1]}')
-
-print('\nUsuarios:')
-cur.execute("SELECT email, role, grupo_id, ativo FROM usuarios ORDER BY id")
-for r in cur.fetchall():
-    print(f'  {r[0]:30} | role={r[1]} | grupo_id={r[2]} | ativo={r[3]}')
-
-conn.close()
+    print("\nUsuarios:")
+    usuarios = db.query(UserModel).order_by(UserModel.id).all()
+    for u in usuarios:
+        print(f"  {u.email:30} | role={u.role} | grupo_id={u.grupo_id} | ativo={u.ativo}")
+finally:
+    db.close()

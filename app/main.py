@@ -12,6 +12,7 @@ from app.core.security import get_password_hash, verify_password
 
 from app.models.user import UserModel
 from app.models.user_group import UserGroupModel # Garante criação da tabela de grupos
+from app.models.script import ScriptModel # Garante criação da tabela de scripts
 from app.models.audit import AuditRuleModel, AuditGroupModel  # Garante criação das tabelas audit_rules e audit_groups
 from app.models.agent import PcStatusSnapshot  # Garante que a tabela seja criada
 from app.models.execution_log import ExecutionLogModel  # Garante criação da tabela de logs de execução
@@ -22,7 +23,7 @@ from app.api.audit import router as audit_router
 from app.api.agent import router as agent_router
 from app.api.routes import router as scripts_router
 
-# Cria todas as tabelas no SQLite ao iniciar
+# Cria todas as tabelas no banco de dados ao iniciar
 create_tables()
 
 # Popula banco e garante pelo menos um administrador ativo (Failsafe Auto-Recovery)
@@ -146,7 +147,7 @@ try:
     # O administrador padrão deve trocar a senha inicial antes do primeiro acesso.
     # Essa verificação ocorre mesmo quando já existe outro administrador ativo,
     # pois o banco pode ter sido criado por uma versão anterior do sistema.
-    if admin_padrao and verify_password("Admin@123", admin_padrao.senha_hash):
+    if admin_padrao and not admin_padrao.exige_troca_senha and verify_password("Admin@123", admin_padrao.senha_hash):
         admin_padrao.exige_troca_senha = True
         db.commit()
 
