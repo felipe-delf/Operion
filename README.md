@@ -18,9 +18,9 @@
 
 | Camada | Stack |
 |---|---|
-| Backend | FastAPI, SQLAlchemy, PyODBC (SQL Server), PyJWT |
+| Backend | FastAPI, SQLAlchemy, PyMySQL (MariaDB), PyODBC (SQL Server), PyJWT |
 | Frontend | React 19, Vite, React Router |
-| Banco local | SQLite (usuários, grupos, regras, scripts) |
+| Banco do Sistema | MariaDB (usuários, grupos, regras, scripts, logs) |
 | Infra | Docker, Docker Compose, GitHub Actions (CI) |
 | Testes | Pytest, TestClient (FastAPI) |
 
@@ -48,8 +48,12 @@ SECRET_KEY=sua_secret_key_aleatoria_aqui
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=600
 
-# Banco de Dados Local
-DATABASE_URL=sqlite:///./parametrizacao.db
+# Banco de Dados do Backend (MariaDB)
+DB_HOST=SEU_SERVIDOR_MARIADB
+DB_PORT=3306
+DB_NAME=OPERION
+DB_USER=seu_usuario_mariadb
+DB_PASSWORD=sua_senha_mariadb
 
 # Banco central da sua rede
 RETAGUARDA_IP=IP_DO_SERVIDOR_CENTRAL
@@ -64,17 +68,9 @@ LOJAS_PWD=sua_senha_lojas
 
 ### 2. Rodar com Docker (Recomendado para Produção)
 
-O banco de usuários, scripts e logs continua em `./parametrizacao.db`, no mesmo caminho usado pelo servidor atual. O arquivo é montado como volume persistente e não deve ser commitado no Git.
+Os dados de usuários, scripts, auditoria e logs são persistidos no MariaDB configurado no `.env`.
 
-Antes de atualizar o projeto, faça um backup:
-
-```bash
-mkdir -p backups
-timestamp=$(date +%Y%m%d-%H%M%S)
-cp parametrizacao.db backups/parametrizacao-$timestamp.db
-```
-
-Depois atualize somente o código e recrie o container:
+Atualize o código e recrie o container:
 
 ```bash
 git pull

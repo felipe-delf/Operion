@@ -210,7 +210,7 @@ class OdbcWorker:
             raise WorkerExecutionError(str(e))
 
 def _atualizar_log_db(log_id: int, status: str):
-    """Atualiza o status_final do log de execução no banco SQLite."""
+    """Atualiza o status_final do log de execução no banco de dados."""
     if not log_id:
         return
     try:

@@ -1,8 +1,14 @@
 """
 conftest.py — Fixtures globais para os testes da API.
 Cria um banco SQLite em memória isolado por sessão de testes,
-nunca tocando no banco de produção parametrizacao.db.
+nunca tocando no banco MariaDB de produção configurado no .env.
 """
+import os
+
+# Força banco em memória antes de qualquer import da aplicação para evitar
+# conexão com o MariaDB do .env durante a execução dos testes.
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
